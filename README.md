@@ -1,4 +1,6 @@
-# Team 12: Federated variant classification with population context
+# Hello World! Federated Learning for Clinical Diagnostics
+
+Team 12: federated variant classification with population context
 
 **Team**
 
