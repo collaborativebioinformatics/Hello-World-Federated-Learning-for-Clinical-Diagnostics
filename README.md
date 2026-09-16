@@ -1,6 +1,13 @@
 # Team 12: Federated variant classification with population context
 
-**Team:** Yan Li, Mohit Panwar, Shreya Srivastava, Oumaima Boussouis, Fenfen Ge, and Claude Code 😉
+**Team**
+
+- Yan Li
+- Mohit Panwar
+- Shreya Srivastava
+- Oumaima Boussouis
+- Fenfen Ge
+- Claude Code 😉
 
 **Question:** Can three hospitals in different countries train one classifier that tells disease-causing DNA variants from harmless ones, without any hospital handing over its data? And can a hospital make the right call for a patient whose ancestry it rarely sees, by asking the other hospitals how common the variant is among *their* patients?
 
