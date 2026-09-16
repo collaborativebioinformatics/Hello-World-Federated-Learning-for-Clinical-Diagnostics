@@ -6,8 +6,6 @@
 
 > Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. Every number in the tables below is illustrative.
 
-A styled version of the flowchart with the example tables is in [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html).
-
 ---
 
 ## 0. Terms in one minute
@@ -30,6 +28,17 @@ A styled version of the flowchart with the example tables is in [docs/pipeline_f
 ---
 
 ## 1. The pipeline in one picture
+
+![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png)
+
+Source for the picture: [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html). Re-render with headless Chrome after editing:
+
+```
+chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1420 --screenshot=docs/pipeline_flowchart.png docs/pipeline_flowchart.html
+```
+
+<details>
+<summary>Same flow as a Mermaid diagram (text-searchable)</summary>
 
 ```mermaid
 flowchart TD
@@ -82,6 +91,8 @@ flowchart TD
     Q --> V
     S -->|"trained model"| V
 ```
+
+</details>
 
 The line from the held-out test set straight to step 5 is the one to notice. Those rows skip training entirely, which is what makes the step 5 score honest.
 
