@@ -8,7 +8,7 @@
     class="step todo"   grey   not started
   Change that one word, edit the text lines, change the date, then re-render:
 
-  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,886 --screenshot=docs/recipe_status.png docs/recipe_status.html
+  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,960 --screenshot=docs/recipe_status.png docs/recipe_status.html
 -->
 <html lang="en">
 <head>
@@ -92,9 +92,10 @@
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step todo"><div class="num">6</div><div class="body">
-  <span class="pill">not started</span><p class="title">Patient query</p>
-  <p class="line">one variant in, carrier counts from every site out · example ready: DSP N1526K</p>
+<div class="step done"><div class="num">6</div><div class="body">
+  <span class="pill">done · model slot empty</span><p class="title">Patient query</p>
+  <p class="line">one variant in, carrier counts from every hospital out, read with two rules · needs no model · try DSP N1526K and TTR V142I</p>
+  <p class="line">run <code>uv run python scripts/06_query_variant.py "DSP N1526K"</code> · interactive: <code>scripts/06_query_tui.py</code> · shared logic in <code>scripts/hospital_query.py</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 

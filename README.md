@@ -42,9 +42,8 @@ Team 12: federated variant classification with population context
 
 ## 1. The pipeline in one picture
 
-![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png?v=4)
+![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png?v=5)
 
-> The picture above is one edit behind the HTML: the step 6 carrier counts in `docs/pipeline_flowchart.html` were corrected to the current build, but this picture needs headless Chrome, which will not run on the machine that made the edit. Whoever has Chrome next, run the command below and raise the `?v=` number on the image link.
 
 Source for the picture: [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html). Re-render with headless Chrome after editing:
 
@@ -340,7 +339,7 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0, 1 and 2 are built and tested, steps 3 to 7 are not started](docs/recipe_status.png?v=4)
+![Recipe status: steps 0 to 3 and step 6 are built and tested, step 4 is next](docs/recipe_status.png?v=6)
 
 Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture. Where headless Chrome will not run, `uv run --with weasyprint --with pypdfium2 --with pillow python scripts/render_docs_png.py` produces the same picture; it does not work for the flowchart, whose arrows need Chrome.
 
@@ -455,6 +454,32 @@ uv run python -c "import pandas as pd; print(pd.read_csv('data/site_lagos/verdic
 column -s, -t < data/site_lagos/verdicts.csv | less -S     # or just open it in Excel
 cat data/sites.json                                        # every size and setting of your run
 ```
+
+---
+
+### Step 6 is built: the patient query
+
+One variant in, carrier counts from every hospital out. It needs no model: each hospital reads its own `patient_counts.csv` and returns a handful of numbers, and two rules a clinical lab already applies by hand read them. Rule 1: common among healthy people somewhere means too common to cause a rare disease. Rule 2: if it piles up among the sick, keep it flagged anyway.
+
+```
+uv run python scripts/06_query_variant.py "DSP N1526K"    # run and print
+uv run python scripts/06_query_variant.py "TTR V142I" --json
+uv run python scripts/06_query_tui.py                     # interactive, needs a real terminal
+```
+
+![The interactive patient query: a variant picker, the call for the patient's hospital alone and for all hospitals together, and one chart with a row per source of evidence](docs/patient_query_tui.png?v=1)
+
+Every bar is a frequency on one shared log scale, and the tick marks 0.1%, too common to cause a rare disease. A green "healthy" bar past the tick clears the variant; a red "sick" bar well past the healthy one keeps it flagged. The dot beside each variant in the list shows its call before you select it. The public database and the three hospitals are rows of one chart, so their bars line up and can be compared directly, and the screen reflows when the window is resized: bars shrink, then names shorten, and the numbers always stay. The `show` dropdown switches between the demo examples, the variants whose call changes once the other hospitals answer (492 for a patient at Oslo, in the current build), the ones kept flagged, and everything. The `gene` dropdown narrows to one gene, and typing filters by name. Arrow keys move through the list, Tab moves between controls, F2 switches small-count hiding on and off, and F3 moves the patient to the next hospital. The call is shown twice: what the patient's own hospital could say alone, with the public database, and what it can say once all hospitals have answered.
+
+| try | what it shows |
+|---|---|
+| `DSP N1526K` | Oslo alone cannot clear it; Lagos's healthy patients show 15%, so it is likely harmless |
+| `TTR V142I` | common at Lagos, yet five times more common among the sick, so it stays flagged |
+| `MYH7 R403Q` | seen nowhere, so frequency says nothing and the scores have to decide |
+
+Step 6 is four short files, one job each: `scripts/hospital_query.py` holds the logic, `scripts/query_drawing.py` holds the look (the palette and how to read the bars), and `06_query_variant.py` and `06_query_tui.py` are thin layers over them, so the two cannot disagree. Every reading is rule-based with fixed thresholds at the top of `hospital_query.py`; nothing is generated or random. The ML side can import it: `query("DSP N1526K").best_frequency` is the frequency to give a model for a patient the asking hospital knows little about, and `model_verdict()` in that file is the marked slot where the trained model plugs in. Until then the output says `model: not connected yet`.
+
+One honest limit: rule 2 uses counts among affected patients, which step 2 generates from the verdict. It demonstrates what real hospital data would allow; it is not evidence, and those counts must never feed a model.
 
 ---
 
