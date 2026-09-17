@@ -131,24 +131,26 @@ Join three public sources by variant. Every hospital will use exactly these colu
 
 ### Step 2. Lock a test set first, then split the rest into hospitals
 
-The test set is locked before anything else and is never trained on. It is a random fifth of the variants, plus every variant of six whole genes that no hospital gets, so we can also ask whether the model works on a gene it has never seen.
+The test set is locked before anything else and is never trained on. It is a random fifth of the variants, plus every variant of six whole genes that no hospital gets, so we can also ask whether the model works on a gene it has never seen. The random fifth is split by amino-acid position rather than by row, so two DNA changes that both give `ACTA2 M46I` cannot end up on opposite sides.
 
 The rest is dealt out to three hospitals of unequal size. A real hospital keeps two things private, and we imitate both:
 
-- **Its verdicts**, `verdicts.csv`: real ClinVar rows. Each variant goes to exactly one hospital, and a variant common in one population mostly lands at that population's hospital.
+- **Its verdicts**, `verdicts.csv`: real ClinVar rows. A variant common in one population mostly lands at that population's hospital. Every variant has one owning hospital, and about a quarter are also classified by a second one, the way real labs overlap. Within a hospital a variant appears once.
 - **Its patients**, `patient_counts.csv`: simulated cohorts drawn from the real gnomAD frequency of that hospital's population. For every variant: copies seen, overall and split by affected and unaffected.
 
 What every hospital already shares is a public frequency reference, `af_public`. Ours covers Europeans only. That is a deliberate pretence: it stands in for the many populations that real references miss, while gnomAD's real South Asian and African columns play the truth only the local hospital can see.
 
 | hospital | population | patients | verdicts | of which population-discordant |
 |---|---|---|---|---|
-| `site_oslo` | European | 20,000 | 4,057 | 81 |
-| `site_karachi` | South Asian | 4,000 | 1,164 | 111 |
-| `site_lagos` | African | 4,000 | 1,190 | 250 |
+| `site_oslo` | European | 20,000 | 4,319 | 95 |
+| `site_karachi` | South Asian | 4,000 | 1,817 | 114 |
+| `site_lagos` | African | 4,000 | 1,921 | 259 |
 
 Oslo is the big lab, yet the variants where population matters sit mostly at the two small ones.
 
 A hospital's file holds the scores, the verdict, `af_public`, and `af_local`, the frequency among its own unaffected patients. It holds none of gnomAD's per-population columns. Full details, and the rules on what may be trained on, are in [docs/data_contract.md](docs/data_contract.md).
+
+Every run checks itself and stops rather than writing a split that is quietly wrong: no test variant in a hospital file, no variant twice in one hospital, both verdicts present at every site, and each `af_local` really drawn from that hospital's own population.
 
 ### Step 3. Each hospital trains on its own rows
 
@@ -194,9 +196,9 @@ A patient of West African ancestry at Oslo carries `DSP N1526K` and has heart sy
 
 | hospital | copies seen | gene copies looked at | among sick | among healthy |
 |---|---|---|---|---|
-| Oslo | 24 | 40,000 | 3 / 6,000 | 21 / 34,000 |
-| Karachi | 4 | 8,000 | 2 / 1,200 | 2 / 6,800 |
-| Lagos | 1,190 | 8,000 | 193 / 1,200 | 997 / 6,800 |
+| Oslo | 24 | 40,000 | 4 / 6,000 | 20 / 34,000 |
+| Karachi | 1 | 8,000 | 0 / 1,200 | 1 / 6,800 |
+| Lagos | 1,207 | 8,000 | 175 / 1,200 | 1,032 / 6,800 |
 
 At Lagos 15% of gene copies carry it, among sick and healthy alike. Only counts travel, never a patient record. These are the actual rows of each site's `patient_counts.csv`, simulated by step 2 from the real gnomAD frequencies. In that build Lagos is also the only hospital holding a verdict on this variant.
 
@@ -275,6 +277,8 @@ Rows are training setups, columns are what the model is allowed to know. Every c
 
 The open question is the fourth row: does weight averaging wash out population-specific frequency evidence, and does a cheap per-site tuning step restore it? Report AUC on all held-out variants and again on the subset whose frequency differs strongly between populations, where the effect should be visible.
 
+Read "per population" as the frequency evidence the model is given, not as three slices of test rows. Splitting the test set by population leaves 12 pathogenic variants in the African slice and none at all in the two thirds of rows gnomAD never saw, so an AUC per slice would be noise. The comparison that carries the result is the same rows scored under different frequency evidence: today's public reference, one hospital's own patients, the three hospitals' counts combined, and the gnomAD ceiling. [docs/data_contract.md](docs/data_contract.md) defines the four. The test set carries a `pop` column for the secondary read, and step 2 prints each slice's positive count so nobody quotes one by accident.
+
 ---
 
 ## 6. What is known and what is new
@@ -306,7 +310,9 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0 and 1 are built and tested, step 2 runs and is in review, steps 3 to 7 are not started](docs/recipe_status.png?v=3)
+![Recipe status: steps 0, 1 and 2 are built and tested, steps 3 to 7 are not started](docs/recipe_status.png?v=3)
+
+> The picture above is one step behind: `docs/recipe_status.html` has step 2 green, but the machine it was last edited on has no headless Chrome to re-render the PNG. Whoever has Chrome next, run the command at the top of that file and raise the `?v=` number here.
 
 Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture.
 
@@ -322,7 +328,7 @@ uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, sam
 
 **Step 1 is built.** It writes `data/variants.csv` and `data/columns.json`, the list of columns later steps should read instead of hard-coding. The table opens in Excel with the readable columns first: name, gene, verdict, stars, then the three site frequencies. Every column is explained in plain language in [docs/table_columns.md](docs/table_columns.md). `data/` is git-ignored because the upstream scores carry non-commercial terms, so we share the recipe and not the table.
 
-**Step 2 runs and is open for review.** The sampling choices were made on the data side, so before anyone trains on these files we want input from the ML side: [docs/step2_review.md](docs/step2_review.md) lists every choice and the concerns we already know about, including one to fix first (the random part of the test set leaks; trust the unseen-gene score until then). It locks the test set and writes each hospital's two private files. The seed is fixed, so the whole team works with the same hospitals, and the script ends by confirming that your build is identical to the team's reference in `config/reference_build.json`. The one thing that can break that is myvariant.info updating its data between two people's downloads; the script detects it and says what to do. [docs/data_contract.md](docs/data_contract.md) lists every file and column and says what may be trained on.
+**Step 2 runs and has been reviewed.** The sampling choices were made on the data side and the ML side has now been through them: [docs/step2_review.md](docs/step2_review.md) lists every choice, the concerns, and what changed as a result. The test-set leak it flagged is fixed, so the whole test set is usable. It locks the test set and writes each hospital's two private files. The seed is fixed, so the whole team works with the same hospitals, and the script ends by confirming that your build is identical to the team's reference in `config/reference_build.json`. The one thing that can break that is myvariant.info updating its data between two people's downloads; the script detects it and says what to do. [docs/data_contract.md](docs/data_contract.md) lists every file and column and says what may be trained on.
 
 What step 1 produced on 17 September 2026:
 

@@ -22,7 +22,7 @@ data/
   site_lagos/...                same two files
 ```
 
-> **In review.** The sampling choices in step 2 are open for input from the ML side, see [step2_review.md](step2_review.md). Known issue: 39% of the `random` test rows share a gene and amino-acid position with a training row, so that part of the test set flatters the model. Until it is fixed, trust the `unseen_gene` score.
+> **Reviewed 17 September 2026.** The ML side has been through the sampling choices; the reply and what changed are in [step2_review.md](step2_review.md). The position leak is fixed, so the whole test set is now usable, not only the `unseen_gene` part.
 
 ## Three rules
 
@@ -34,7 +34,9 @@ data/
 
 ### `site_*/verdicts.csv`: a hospital's private classified variants
 
-One row per variant. Every variant belongs to exactly one hospital. A variant common in one population mostly landed at that population's hospital, so the three files differ in kind, not only in size.
+One row per variant, and a variant appears at most once per hospital. A variant common in one population mostly landed at that population's hospital, so the three files differ in kind, not only in size.
+
+Every variant has one owning hospital, and with `SITE_OVERLAP = 0.5` another hospital may also have classified it, the way real labs overlap. That second draw follows population alone, so a small lab still meets what is common among its own patients. About a quarter of the training variants are held by more than one hospital. Set `SITE_OVERLAP = 0.0` for a clean partition, which is the sharper federated-versus-pooled contrast and the control run worth having.
 
 | column | meaning | use |
 |---|---|---|
@@ -63,8 +65,10 @@ One row for every variant in the whole table, test variants included, because pa
 
 All columns of `variants.csv`, plus `af_public`, plus `test_kind`:
 
-- `random`: a random fifth of the variants, with the same mix of verdicts and of population-discordant variants as the training rows.
+- `random`: a random fifth of the variants, with the same mix of verdicts and of population-discordant variants as the training rows. Split by amino-acid **position**, not by row, so two DNA changes that both give `ACTA2 M46I` cannot sit on opposite sides of the split.
 - `unseen_gene`: every variant of six whole genes that no hospital has. This answers "does the model work on a gene it has never seen?", which guards against a model that merely recognises genes.
+
+It also carries `pop`: the site population the variant is most common in, or `none` when gnomAD never saw it in any of the three. This is for the per-population AUC in README section 5, and it is a thin instrument: 1,459 of 2,373 test rows are `none`, and the AFR slice has 12 pathogenic rows. Step 2 prints every slice's positive count. Report the evidence-setting comparison below as the headline and treat per-population AUC as secondary, always with its sample size.
 
 This file keeps gnomAD's real `af_nfe`, `af_sas`, `af_afr`. They are the truth to score against, not inputs a hospital would have.
 
@@ -93,16 +97,22 @@ On `pop_discordant == 1` test rows, which are almost all benign, report the fals
 | the gene list | every patient count |
 | | the public reference covering Europeans only. That is a deliberate pretence, standing in for the many populations real references miss. gnomAD's real South Asian and African columns play the truth only the local hospital can see |
 
+## Every build checks itself
+
+Step 2 stops rather than writing a split that is quietly wrong. It asserts that no test variant reached a hospital file, that no hospital lists a variant twice, that every hospital has both verdicts and at least 100 pathogenic rows, and that each hospital's `af_local` really came from its own population rather than a neighbour's cohort.
+
+`uv run python scripts/02_simulate_hospitals.py --self-check` hands every hospital the wrong cohort on purpose and expects the run to stop. An assertion that cannot fail reads like a guarantee and is worse than none; an earlier version of this one compared `af_local` against the same constant it was derived from and passed no matter what.
+
 ## This run
 
-Seed 12. Settings sit at the top of `scripts/02_simulate_hospitals.py`.
+Seed 12, `SITE_OVERLAP` 0.5. Settings sit at the top of `scripts/02_simulate_hospitals.py`.
 
 | | population | patients | verdicts | pathogenic | benign | population-discordant |
 |---|---|---|---|---|---|---|
-| `site_oslo` | European | 20,000 | 4,057 | 2,632 | 1,425 | 81 |
-| `site_karachi` | South Asian | 4,000 | 1,164 | 609 | 555 | 111 |
-| `site_lagos` | African | 4,000 | 1,190 | 569 | 621 | 250 |
+| `site_oslo` | European | 20,000 | 4,319 | 2,811 | 1,508 | 95 |
+| `site_karachi` | South Asian | 4,000 | 1,817 | 1,102 | 715 | 114 |
+| `site_lagos` | African | 4,000 | 1,921 | 1,084 | 837 | 259 |
 
-Test set: 2,379 rows. 1,602 random, 777 from the unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3, TNNT2.
+Test set: 2,373 rows. 1,596 random, 777 from the unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3, TNNT2. 1,525 of the 6,417 training variants are held by more than one hospital.
 
 Patient settings are illustrative, not estimates: 15% of each cohort are heart patients, a fifth of those are explained by one pathogenic variant, and pathogenic variants are five times more common among the affected.

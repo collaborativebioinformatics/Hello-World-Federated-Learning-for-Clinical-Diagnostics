@@ -20,9 +20,15 @@ Writes  data/test/variants.csv          locked first, never trained on
         data/site_*/patient_counts.csv  that hospital's private carrier counts
         data/sites.json                 the settings and sizes of this run
 
+Every run ends by checking itself: no test variant reaches a hospital, no
+hospital lists a variant twice, every hospital has both verdicts and enough
+positives to train on, and each hospital's af_local really comes from its own
+population. --self-check proves those checks can still fail.
+
 Usage:
     uv run python scripts/02_simulate_hospitals.py
     uv run python scripts/02_simulate_hospitals.py --set-reference   # declare this build the team's reference
+    uv run python scripts/02_simulate_hospitals.py --self-check      # break the build on purpose, expect a stop
 
 The seed is fixed, so everyone who starts from the same data/variants.csv gets
 byte-identical files. The script says whether your build matches the team's
@@ -68,11 +74,25 @@ SITES = {
 }
 PUBLIC_REFERENCE_POPULATION = "nfe"
 
+# How often a variant owned by one hospital is also classified by another. Real
+# labs overlap. 0.0 is a clean partition, which keeps the federated-vs-pooled
+# contrast sharpest; higher gives the small labs more rows to train on.
+# Secondary pickup follows population alone, not lab size: a small lab still
+# meets the variants common in its own population, it just classifies fewer
+# variants overall.
+SITE_OVERLAP = 0.5
+
 # Test set: a random fifth of the variants, plus every variant of a few whole
 # genes, so we can also ask "does it work on a gene it has never seen?"
+# The random fifth is split by amino-acid POSITION, not by row: two DNA changes
+# that both give ACTA2 M46I have near-identical scores and usually the same
+# verdict, so splitting them across test and training flatters the model.
 TEST_SHARE = 0.20
 UNSEEN_GENES = 6
 MIN_PER_VERDICT = 10  # an unseen gene needs this many pathogenic and benign rows
+
+# A hospital with fewer positives than this cannot train; the run stops.
+MIN_PATHOGENIC_PER_SITE = 100
 
 # Patient simulation. Illustrative settings, not estimates.
 AFFECTED_SHARE = 0.15  # share of a cohort that are heart patients
@@ -84,6 +104,27 @@ TRUTH_COLUMNS_PREFIXES = ("af_", "ac_", "an_")
 TRUTH_COLUMNS_EXACT = ("in_gnomad", "pop_discordant")
 
 
+def amino_acid_position(table: pd.DataFrame) -> pd.Series:
+    """`MYH7 R403Q` -> `MYH7:403`, the protein position several DNA changes can share.
+
+    The digits are taken from the amino-acid change only. Gene names carry digits
+    of their own, so `COL1A1 G272D` must not be read as position 1.
+    """
+    number = table.name.str.extract(r" [A-Za-z](\d+)[A-Za-z]$", expand=False)
+    return (table.gene + ":" + number).fillna(table.variant_id)
+
+
+def population_of(table: pd.DataFrame) -> pd.Series:
+    """The site population a variant is most common in, or `none` if gnomAD never saw it.
+
+    Same rule for every row. Two thirds of the table is `none`, so a per-population
+    slice is a thin instrument; see docs/step2_review.md.
+    """
+    frequencies = table[[f"af_{site.population}" for site in SITES.values()]]
+    highest = frequencies.idxmax(axis=1).str.removeprefix("af_")
+    return highest.where(frequencies.max(axis=1) > 0, "none")
+
+
 def lock_test_set(table: pd.DataFrame, rng: np.random.Generator) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
     per_gene = table.groupby("gene").label.agg(pathogenic="sum", rows="size")
     per_gene["benign"] = per_gene.rows - per_gene.pathogenic
@@ -92,8 +133,14 @@ def lock_test_set(table: pd.DataFrame, rng: np.random.Generator) -> tuple[pd.Dat
 
     in_unseen_gene = table.gene.isin(unseen_genes)
     rest = table[~in_unseen_gene]
-    # Keep the mix of verdicts and of population-discordant variants the same in test and training.
-    random_fifth = rest.groupby(["label", "pop_discordant"], group_keys=False).sample(frac=TEST_SHARE, random_state=SEED)
+    # Split by amino-acid position, so every variant at one position lands on the
+    # same side. Keep the mix of verdicts and of population-discordant variants
+    # the same in test and training: a position counts as pathogenic, or as
+    # discordant, if any of its variants is.
+    position = amino_acid_position(rest)
+    strata = rest[["label", "pop_discordant"]].groupby(position).max()
+    chosen = strata.groupby(["label", "pop_discordant"], group_keys=False).sample(frac=TEST_SHARE, random_state=SEED)
+    random_fifth = rest[position.isin(chosen.index)]
 
     test = pd.concat([
         table[in_unseen_gene].assign(test_kind="unseen_gene"),
@@ -103,11 +150,18 @@ def lock_test_set(table: pd.DataFrame, rng: np.random.Generator) -> tuple[pd.Dat
     return test, training_pool, unseen_genes
 
 
-def deal_verdicts(training_pool: pd.DataFrame, rng: np.random.Generator) -> pd.Series:
-    """Give each variant to exactly one hospital.
+def deal_verdicts(training_pool: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
+    """Decide which hospitals have classified which variant.
 
-    A variant seen mostly in one population goes mostly to that population's
-    hospital. A variant gnomAD never saw goes anywhere, in proportion to lab size.
+    Every variant gets one owner: a variant seen mostly in one population goes
+    mostly to that population's hospital, and a variant gnomAD never saw goes
+    anywhere, in proportion to lab size.
+
+    With SITE_OVERLAP above zero another hospital can also hold it. That second
+    draw follows the population alone, so a small lab still meets the variants
+    common among its own patients.
+
+    Returns a boolean frame, one column per hospital, one row per variant.
     """
     tiny = 1e-6
     frequencies = training_pool[[f"af_{site.population}" for site in SITES.values()]].to_numpy() + tiny
@@ -118,8 +172,12 @@ def deal_verdicts(training_pool: pd.DataFrame, rng: np.random.Generator) -> pd.S
     chance = chance / chance.sum(axis=1, keepdims=True)
 
     draw = rng.random(len(training_pool))[:, None]
-    chosen = (draw > chance.cumsum(axis=1)).sum(axis=1)
-    return pd.Series(np.array(list(SITES))[chosen], index=training_pool.index)
+    owner = (draw > chance.cumsum(axis=1)).sum(axis=1)
+    holds = np.zeros_like(chance, dtype=bool)
+    holds[np.arange(len(owner)), owner] = True
+
+    also = rng.random(chance.shape) < SITE_OVERLAP * share_of_carriers
+    return pd.DataFrame(holds | also, index=training_pool.index, columns=list(SITES))
 
 
 def simulate_patient_counts(table: pd.DataFrame, site: Site, rng: np.random.Generator) -> pd.DataFrame:
@@ -171,6 +229,55 @@ def hospital_view(rows: pd.DataFrame, public_reference: pd.DataFrame, patient_co
     return view[front + [c for c in view.columns if c not in front]].round({"af_local": 6})
 
 
+def check(test: pd.DataFrame, hospitals: dict[str, pd.DataFrame]) -> None:
+    """The four ways this split can be silently wrong. Cheap to check, fatal to miss."""
+    locked = set(test.variant_id)
+    for name, rows in hospitals.items():
+        # A test variant in a training file makes every later number meaningless.
+        assert not locked & set(rows.variant_id), f"{name} holds test variants"
+        # One row per variant per hospital: a duplicate would weight it twice.
+        assert rows.variant_id.is_unique, f"{name} lists a variant twice"
+        assert rows.label.nunique() == 2, f"{name} has only one verdict, nothing to train on"
+        assert rows.label.sum() >= MIN_PATHOGENIC_PER_SITE, (
+            f"{name} has {int(rows.label.sum())} pathogenic rows, under {MIN_PATHOGENIC_PER_SITE}"
+        )
+
+    # af_local must come from this hospital's own patients. Wiring the wrong
+    # population in here would quietly delete the whole point of the project, and
+    # the file would still look perfectly normal.
+    truth = pd.read_csv(DATA_DIR / "variants.csv").set_index("variant_id")
+    columns = [f"af_{s.population}" for s in SITES.values()]
+    for name, site in SITES.items():
+        rows = hospitals[name]
+        seen = truth.loc[rows.variant_id, columns]
+        # Only variants gnomAD actually saw. On the all-zero rows every population
+        # ties, and a tie would let a miswired column pass.
+        informative = seen.max(axis=1) > 0
+        closest = seen[informative].sub(rows.af_local.to_numpy()[informative], axis=0).abs().sum().idxmin()
+        assert closest == f"af_{site.population}", f"{name} af_local looks like {closest}, not its own population"
+
+
+def self_check() -> int:
+    """Prove check() is not vacuous, by breaking the plumbing and expecting a stop.
+
+    An assertion that cannot fail is worse than none: it reads like a guarantee.
+    An earlier version of check() compared af_local against the same constant it
+    was derived from and passed no matter what, which is why this exists.
+    """
+    global simulate_patient_counts
+    honest = simulate_patient_counts
+    simulate_patient_counts = lambda table, site, rng: honest(table, SITES["site_lagos"], rng)
+    try:
+        main([])   # [] so the flag is not re-read and this does not recurse
+    except AssertionError as caught:
+        print(f"\nself-check passed: the broken build was stopped with {caught}")
+        return 0
+    finally:
+        simulate_patient_counts = honest
+    print("\nSELF-CHECK FAILED: every hospital was given Lagos's cohort and check() said nothing.", file=sys.stderr)
+    return 1
+
+
 def save(frame: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame.to_csv(path, index=False, lineterminator="\n")  # same bytes on Windows, Mac and Linux
@@ -208,10 +315,13 @@ def compare_with_reference(build: dict, set_reference: bool) -> None:
               "at the top of this script and uv.lock are unchanged.")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Lock a test set and simulate three hospitals")
     parser.add_argument("--set-reference", action="store_true", help="declare this build the team's reference")
-    args = parser.parse_args()
+    parser.add_argument("--self-check", action="store_true", help="prove the safety checks can actually fail")
+    args = parser.parse_args(argv)
+    if args.self_check:
+        return self_check()
 
     table_file = DATA_DIR / "variants.csv"
     if not table_file.exists():
@@ -221,24 +331,28 @@ def main() -> int:
     rng = np.random.default_rng(SEED)
 
     test, training_pool, unseen_genes = lock_test_set(table, rng)
-    site_of_variant = deal_verdicts(training_pool, rng)
+    held_by = deal_verdicts(training_pool, rng)
 
     public_reference = table[["variant_id"]].assign(af_public=table[f"af_{PUBLIC_REFERENCE_POPULATION}"])
+    test = test.assign(pop=population_of(test))
     written = [DATA_DIR / "public_reference.csv", DATA_DIR / "test" / "variants.csv"]
     save(public_reference, written[0])
     save(test.merge(public_reference, on="variant_id"), written[1])
 
-    run = {"seed": SEED, "unseen_genes": unseen_genes, "test_rows": len(test), "sites": {}}
+    run = {"seed": SEED, "site_overlap": SITE_OVERLAP, "unseen_genes": unseen_genes,
+           "test_rows": len(test), "sites": {}}
     print(f"test set: {len(test)} rows  ({int((test.test_kind == 'random').sum())} random, "
           f"{int((test.test_kind == 'unseen_gene').sum())} from unseen genes: {', '.join(unseen_genes)})\n")
     print(f"{'hospital':<13} {'population':<11} {'patients':>8} {'verdicts':>9} {'pathogenic':>11} {'benign':>7} {'discordant':>11}")
 
+    hospitals = {}
     for site_name, site in SITES.items():
         folder = DATA_DIR / site_name
         patient_counts = simulate_patient_counts(table, site, rng)
-        own_rows = training_pool[site_of_variant == site_name]
+        own_rows = training_pool[held_by[site_name]]
+        hospitals[site_name] = hospital_view(own_rows, public_reference, patient_counts)
         save(patient_counts, folder / "patient_counts.csv")
-        save(hospital_view(own_rows, public_reference, patient_counts), folder / "verdicts.csv")
+        save(hospitals[site_name], folder / "verdicts.csv")
         written += [folder / "patient_counts.csv", folder / "verdicts.csv"]
 
         pathogenic = int(own_rows.label.sum())
@@ -252,6 +366,11 @@ def main() -> int:
             "benign": len(own_rows) - pathogenic,
         }
 
+    shared = int((held_by.sum(axis=1) > 1).sum())
+    print(f"\noverlap {SITE_OVERLAP}: {shared} of {len(training_pool)} variants are held by more than one hospital")
+    check(test, hospitals)
+    print_population_slices(test)
+
     build = {
         "variant_rows": len(table),
         "variant_table": fingerprint([table_file]),
@@ -263,6 +382,16 @@ def main() -> int:
     print(f"\nwrote data/test/, data/public_reference.csv, data/sites.json and {len(SITES)} hospital folders")
     compare_with_reference(build, args.set_reference)
     return 0
+
+
+def print_population_slices(test: pd.DataFrame) -> None:
+    """Per-population AUC needs positives. Print how few there are before anyone trusts one."""
+    print("\ntest rows by population, the slices a per-population AUC would use:")
+    counts = test.groupby("pop").label.agg(rows="size", pathogenic="sum")
+    for population, row in counts.iterrows():
+        warning = "  <- too few positives for an AUC" if 0 < row.pathogenic < 30 else ""
+        print(f"  {population:<6} {row.rows:>5} rows {row.pathogenic:>5} pathogenic{warning}")
+    print("  'none' means gnomAD never saw the variant in any of the three populations.")
 
 
 def print_example(table: pd.DataFrame, name: str) -> None:

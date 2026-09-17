@@ -63,12 +63,12 @@
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step next"><div class="num">2</div><div class="body">
-  <span class="pill">runs · in review, ML input wanted</span><p class="title">Hospital files</p>
-  <p class="line">test set 2,379 rows: a random fifth plus six unseen genes · verdicts: Oslo 4,057, Karachi 1,164, Lagos 1,190 · patient cohorts 20,000 / 4,000 / 4,000</p>
+<div class="step done"><div class="num">2</div><div class="body">
+  <span class="pill">done</span><p class="title">Hospital files</p>
+  <p class="line">test set 2,373 rows: a random fifth split by amino-acid position, plus six unseen genes · verdicts: Oslo 4,319, Karachi 1,817, Lagos 1,921 · patient cohorts 20,000 / 4,000 / 4,000</p>
   <p class="line">makes <code>data/test/</code>, <code>data/site_*/verdicts.csv</code> and <code>patient_counts.csv</code>, <code>data/public_reference.csv</code></p>
   <p class="line">run <code>uv run python scripts/02_simulate_hospitals.py</code> · file and column rules in <code>docs/data_contract.md</code></p>
-  <p class="line">open questions on sampling and bias: <code>docs/step2_review.md</code> · known issue: the random test rows leak, trust the unseen-gene score</p>
+  <p class="line">reviewed by the ML side, test-set leak fixed: <code>docs/step2_review.md</code> · every build self-checks, <code>--self-check</code> proves the checks can fail</p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
