@@ -342,7 +342,7 @@ def main() -> int:
 
     table = tidy(pd.DataFrame(rows_by_id.values()))
     try:
-        table.to_csv(args.out, index=False)
+        table.to_csv(args.out, index=False, lineterminator="\n")  # same bytes on Windows, Mac and Linux
     except PermissionError:
         print(f"\nCannot write {args.out}. It is open in another program, probably Excel. Close it and run again.", file=sys.stderr)
         return 1
