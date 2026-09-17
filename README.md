@@ -42,7 +42,9 @@ Team 12: federated variant classification with population context
 
 ## 1. The pipeline in one picture
 
-![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png?v=3)
+![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png?v=4)
+
+> The picture above is one edit behind the HTML: the step 6 carrier counts in `docs/pipeline_flowchart.html` were corrected to the current build, but this picture needs headless Chrome, which will not run on the machine that made the edit. Whoever has Chrome next, run the command below and raise the `?v=` number on the image link.
 
 Source for the picture: [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html). Re-render with headless Chrome after editing:
 
@@ -311,11 +313,9 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0, 1 and 2 are built and tested, steps 3 to 7 are not started](docs/recipe_status.png?v=3)
+![Recipe status: steps 0, 1 and 2 are built and tested, steps 3 to 7 are not started](docs/recipe_status.png?v=4)
 
-> The picture above is one step behind: `docs/recipe_status.html` has step 2 green, but the machine it was last edited on has no headless Chrome to re-render the PNG. Whoever has Chrome next, run the command at the top of that file and raise the `?v=` number here.
-
-Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture.
+Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture. Where headless Chrome will not run, `uv run --with weasyprint --with pypdfium2 --with pillow python scripts/render_docs_png.py` produces the same picture; it does not work for the flowchart, whose arrows need Chrome.
 
 Needs [uv](https://docs.astral.sh/uv/). Python 3.12 and the packages install themselves on first run.
 

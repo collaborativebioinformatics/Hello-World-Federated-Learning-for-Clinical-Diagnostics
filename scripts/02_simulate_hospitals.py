@@ -263,18 +263,28 @@ def self_check() -> int:
     An assertion that cannot fail is worse than none: it reads like a guarantee.
     An earlier version of check() compared af_local against the same constant it
     was derived from and passed no matter what, which is why this exists.
+
+    The broken run writes its files before check() stops it, so this always
+    rebuilds afterwards. Leaving a deliberately wrong build on disk would be a
+    nastier bug than the one being tested for.
     """
     global simulate_patient_counts
     honest = simulate_patient_counts
     simulate_patient_counts = lambda table, site, rng: honest(table, SITES["site_lagos"], rng)
     try:
         main([])   # [] so the flag is not re-read and this does not recurse
+        passed = False
     except AssertionError as caught:
         print(f"\nself-check passed: the broken build was stopped with {caught}")
-        return 0
+        passed = True
     finally:
         simulate_patient_counts = honest
-    print("\nSELF-CHECK FAILED: every hospital was given Lagos's cohort and check() said nothing.", file=sys.stderr)
+
+    print("\nrebuilding the real hospitals, since the broken run overwrote them\n")
+    main([])
+    if passed:
+        return 0
+    print("SELF-CHECK FAILED: every hospital was given Lagos's cohort and check() said nothing.", file=sys.stderr)
     return 1
 
 
