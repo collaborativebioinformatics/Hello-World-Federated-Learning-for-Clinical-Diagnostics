@@ -30,6 +30,7 @@ Team 12: federated variant classification with population context
 | dbNSFP | Public spreadsheet that collects those scores for every variant. |
 | Allele frequency, AF | How common a variant is in a population. `0.012` means 1.2% of gene copies carry it. |
 | gnomAD | Public counts giving one AF per population: NFE (Northern European), SAS (South Asian), AFR (African), and more. |
+| Population-discordant | A variant that is common in one of our three populations and at least ten times rarer in another. These are the variants where "how common is this" depends on whose patients you count, so they are the ones the whole project is about. 622 of our 8,790. |
 | Site | One simulated hospital, one folder, one population. |
 | Federated learning, FedAvg | Each site trains locally; a server averages the model **weights**, not the predictions and not the data. |
 | AUC | One score for a classifier: 0.5 is a coin flip, 1.0 is perfect. |
@@ -319,18 +320,27 @@ Green means the step runs from a fresh clone with the command shown. To update t
 Needs [uv](https://docs.astral.sh/uv/). Python 3.12 and the packages install themselves on first run.
 
 ```
+git clone https://github.com/collaborativebioinformatics/Hello-World-Federated-Learning-for-Clinical-Diagnostics.git
+cd Hello-World-Federated-Learning-for-Clinical-Diagnostics
 uv sync
+
 uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp (already committed)
 uv run python scripts/01_build_table.py             # step 1, about 4 minutes, then cached
-uv run python scripts/01_build_table.py --refresh   # re-download from myvariant.info
-uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, same result every time
+uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, the hospital files
+```
+
+Two flags worth knowing:
+
+```
+uv run python scripts/01_build_table.py --refresh          # re-download from myvariant.info
+uv run python scripts/02_simulate_hospitals.py --self-check # break the split on purpose, expect it to stop
 ```
 
 **Step 1 is built.** It writes `data/variants.csv` and `data/columns.json`, the list of columns later steps should read instead of hard-coding. The table opens in Excel with the readable columns first: name, gene, verdict, stars, then the three site frequencies. Every column is explained in plain language in [docs/table_columns.md](docs/table_columns.md). `data/` is git-ignored because the upstream scores carry non-commercial terms, so we share the recipe and not the table.
 
-**Step 2 runs and has been reviewed.** The sampling choices were made on the data side and the ML side has now been through them: [docs/step2_review.md](docs/step2_review.md) lists every choice, the concerns, and what changed as a result. The test-set leak it flagged is fixed, so the whole test set is usable. It locks the test set and writes each hospital's two private files. The seed is fixed, so the whole team works with the same hospitals, and the script ends by confirming that your build is identical to the team's reference in `config/reference_build.json`. The one thing that can break that is myvariant.info updating its data between two people's downloads; the script detects it and says what to do. [docs/data_contract.md](docs/data_contract.md) lists every file and column and says what may be trained on.
+### What step 1 produced
 
-What step 1 produced on 17 September 2026:
+From the 17 September 2026 build:
 
 | | |
 |---|---|
@@ -348,6 +358,55 @@ What the real data told us:
 - **Seven panel genes are missing.** ACTC1, APOA2, APOC2, GLA, NOTCH1, PLN and TNNI3K have ClinVar entries in myvariant.info but no dbNSFP scores in its hg38 index.
 - **The gene list inherits a European lean.** PanelApp is curated in the UK from a literature built mostly on European-ancestry families, and ClinVar verdicts come mostly from US and European labs. We correct the frequency evidence, not these two.
 - Label rule: a variant is kept only if every ClinVar record with at least one review star agrees. About 8,000 downloaded variants were dropped as uncertain, conflicting or unreviewed.
+
+**Step 2 is built and reviewed.** It turns the one table into a locked test set and three hospitals, in this order:
+
+1. **Lock the test set first.** Six whole genes that no hospital will ever see, plus a fifth of the remaining variants. That fifth is split by amino-acid position, not by row, so two DNA changes that both spell `ACTA2 M46I` cannot land on opposite sides of the split.
+2. **Deal the rest to three hospitals.** A variant common in one population mostly goes to that population's hospital. Every variant has one owning hospital, and with `SITE_OVERLAP = 0.5` a second one may also have classified it, the way real labs overlap.
+3. **Simulate each hospital's patients.** A cohort drawn from the real gnomAD frequency of that hospital's population, giving carrier counts per variant, split by affected and unaffected.
+4. **Give each hospital two frequencies.** `af_public`, the European-only reference everyone already shares, and `af_local`, measured on its own unaffected patients.
+5. **Check the result and stop if it is wrong.** No test variant in a hospital file, no variant twice within one hospital, both verdicts present at every site with at least 100 pathogenic rows, and each `af_local` really drawn from its own population rather than a neighbour's cohort.
+
+The seed is fixed, so the whole team gets byte-identical files, and the script ends by confirming your build matches `config/reference_build.json`. The one thing that can break that is myvariant.info updating its data between two people's downloads; the script detects it and says what to do. The sampling choices were reviewed by the ML side: [docs/step2_review.md](docs/step2_review.md) has every choice, the concerns and what changed. [docs/data_contract.md](docs/data_contract.md) lists every file and column and says what may be trained on.
+
+### What step 2 wrote
+
+```
+data/
+  test/variants.csv             2,373 rows, 43 columns   locked, never trained on
+  public_reference.csv          8,790 rows               af_public, what every hospital already has
+  sites.json                                             settings and sizes of this run
+  site_oslo/verdicts.csv        4,319 rows, 26 columns   Oslo's private classified variants
+  site_oslo/patient_counts.csv  8,790 rows               Oslo's private carrier counts
+  site_karachi/...              same two files
+  site_lagos/...                same two files
+```
+
+Each hospital, from the 17 September 2026 build:
+
+| | `site_oslo` | `site_karachi` | `site_lagos` |
+|---|---|---|---|
+| population | European (NFE) | South Asian (SAS) | African (AFR) |
+| patients in its cohort | 20,000 | 4,000 | 4,000 |
+| classified variants | 4,319 | 1,817 | 1,921 |
+| pathogenic | 2,811 | 1,102 | 1,084 |
+| benign | 1,508 | 715 | 837 |
+| share pathogenic | 65% | 61% | 56% |
+| population-discordant | 95 | 114 | 259 |
+| variants its own patients actually carry (`af_local > 0`) | 257 | 91 | 453 |
+| variants no other hospital holds | 3,003 | 899 | 990 |
+
+Three things to read off that table. Oslo is the big lab and holds more than twice the variants, which is the imbalance federation has to survive. The variants where population matters sit mostly at the two small hospitals: Lagos alone holds 259 of them. And although Lagos sequences a fifth as many patients as Oslo, its cohort actually carries 453 of its own variants against Oslo's 257, because the variants dealt to Lagos are the ones common in African-ancestry people.
+
+The test set is 2,373 rows: 1,596 `random` and 777 from the six unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3 and TNNT2. 183 of them are population-discordant and every one of those is benign, which is why that subset is scored with a false-alarm rate and not an AUC. 1,525 of the 6,417 training variants are held by more than one hospital.
+
+To look at what you built:
+
+```
+uv run python -c "import pandas as pd; print(pd.read_csv('data/site_lagos/verdicts.csv').head())"
+column -s, -t < data/site_lagos/verdicts.csv | less -S     # or just open it in Excel
+cat data/sites.json                                        # every size and setting of your run
+```
 
 ---
 
