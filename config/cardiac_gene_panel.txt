@@ -1,0 +1,118 @@
+# Cardiac gene panel: green (diagnostic-grade) genes from Genomics England PanelApp,
+# taken from the heart-related panels signed off by the NHS Genomic Medicine Service.
+# Written by scripts/00_fetch_gene_panel.py on 2026-09-17. Rerunning overwrites this file.
+#
+#     49  v6.4     24 green genes  Hypertrophic cardiomyopathy
+#    652  v4.11    35 green genes  Dilated and arrhythmogenic cardiomyopathy
+#    842  v14.33   14 green genes  Cardiac arrhythmias
+#    700  v5.8     35 green genes  Thoracic aortic aneurysm or dissection (GMS)
+#    772  v2.7      5 green genes  Familial hypercholesterolaemia (GMS)
+#    502  v1.31     7 green genes  Hereditary systemic amyloidosis
+#
+# 104 genes. The numbers after each gene are the panels that list it.
+# Cite: Martin AR et al., Nature Genetics 51, 1560-1565 (2019). https://panelapp.genomicsengland.co.uk
+
+ABL1      # 700
+ACTA2     # 700
+ACTC1     # 49, 652
+ACTN2     # 49, 652
+ALPK3     # 49
+APOA1     # 502
+APOA2     # 502
+APOB      # 772
+APOC2     # 502
+APOE      # 772
+ASPH      # 700
+BAG3      # 652
+BGN       # 700
+CACNA1C   # 49, 842
+CALM1     # 842
+CALM2     # 842
+CALM3     # 842
+CASQ2     # 842
+CBS       # 700
+CDH2      # 652
+COL1A1    # 700
+COL3A1    # 700
+COL5A1    # 700
+COL5A2    # 700
+CSRP3     # 49
+DES       # 652
+DMD       # 652
+DOLK      # 652
+DSC2      # 652
+DSG2      # 652
+DSP       # 652
+EFEMP2    # 700
+ELN       # 700
+EMD       # 652
+FBLN5     # 700
+FBN1      # 700
+FBN2      # 700
+FGA       # 502
+FHL1      # 49
+FHOD3     # 49
+FKBP14    # 700
+FLNA      # 700
+FLNC      # 49, 652
+GLA       # 49
+GNB5      # 842
+GSN       # 502
+IPO8      # 700
+JUP       # 652
+KCNE1     # 842
+KCNH2     # 842
+KCNJ2     # 842
+KCNQ1     # 842
+KLHL24    # 49
+LAMP2     # 49, 652
+LDLR      # 772
+LDLRAP1   # 772
+LMNA      # 652
+LOX       # 700
+LYZ       # 502
+MFAP5     # 700
+MYBPC3    # 49, 652
+MYH11     # 700
+MYH7      # 49, 652
+MYL2      # 49
+MYL3      # 49
+MYLK      # 700
+NEXN      # 652
+NKX2-5    # 652
+NOTCH1    # 700
+PCSK9     # 772
+PKP2      # 652
+PLN       # 49, 652
+PLOD1     # 700
+PMEPA1    # 700
+PPA2      # 652
+PRDM16    # 652
+PRKAG2    # 49
+PRKG1     # 700
+RBM20     # 652
+RYR2      # 652, 842
+SCN5A     # 652, 842
+SECISBP2  # 700
+SKI       # 700
+SLC2A10   # 700
+SMAD2     # 700
+SMAD3     # 700
+SMAD4     # 700
+TBX20     # 49, 652
+TECRL     # 842
+TGFB2     # 700
+TGFB3     # 700
+TGFBR1    # 700
+TGFBR2    # 700
+TMEM43    # 652
+TNNC1     # 49, 652
+TNNI3     # 49, 652
+TNNI3K    # 652
+TNNT2     # 49, 652
+TPM1      # 49, 652
+TRDN      # 842
+TRIM63    # 49
+TTN       # 652
+TTR       # 49, 502
+VCL       # 652

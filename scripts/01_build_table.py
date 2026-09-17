@@ -1,0 +1,421 @@
+"""Step 1: build the variant table from myvariant.info.
+
+One API record per variant already holds the three things we need:
+    ClinVar  ->  the expert verdict           (our label)
+    dbNSFP   ->  computer prediction scores   (our features)
+    gnomAD   ->  frequency per population
+
+Writes into data/ (git-ignored):
+    variants.csv    one row per variant, the readable columns first
+    columns.json    which columns are features, frequencies and label
+    raw/GENE.json   cached downloads, so reruns are instant
+
+Usage:
+    uv run python scripts/01_build_table.py
+    uv run python scripts/01_build_table.py --refresh          # download again
+    uv run python scripts/01_build_table.py --genes MYH7,TTR   # quick test
+
+What every column means: docs/table_columns.md
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import re
+import sys
+import time
+from collections import Counter
+from pathlib import Path
+
+import pandas as pd
+import requests
+
+ROOT = Path(__file__).resolve().parents[1]
+GENE_PANEL = ROOT / "config" / "cardiac_gene_panel.txt"
+DATA_DIR = ROOT / "data"
+CACHE_DIR = DATA_DIR / "raw"
+
+API_URL = "https://myvariant.info/v1/query"
+GENOME_BUILD = "hg38"
+
+# Score columns: our column name -> where the value sits in the API record.
+#
+# These are dbNSFP "rank scores": each tool's output rescaled to 0..1, where
+# higher always means more damaging. Same direction and same scale everywhere,
+# so no hospital ever needs to share scaling statistics.
+#
+# Left out on purpose, because they were trained on ClinVar or HGMD labels and
+# would leak the answer: REVEL, ClinPred, BayesDel, MetaLR, MetaSVM, MetaRNN,
+# VEST4, M-CAP, MutPred, MVP, gMVP, VARITY, DEOGEN2, MutationTaster, FATHMM.
+SCORES = {
+    "alphamissense": "dbnsfp.alphamissense.rankscore",
+    "cadd": "dbnsfp.cadd.raw_rankscore",
+    "dann": "dbnsfp.dann.rankscore",
+    "primateai": "dbnsfp.primateai.rankscore",
+    "mpc": "dbnsfp.mpc.rankscore",
+    "sift": "dbnsfp.sift.converted_rankscore",
+    "sift4g": "dbnsfp.sift4g.converted_rankscore",
+    "provean": "dbnsfp.provean.converted_rankscore",
+    "phylop100": "dbnsfp.phylop.100way_vertebrate.rankscore",
+    "phastcons100": "dbnsfp.phastcons.100way_vertebrate.rankscore",
+    "siphy29": "dbnsfp.siphy_29way.logodds_rankscore",
+    "bstatistic": "dbnsfp.bstatistic.converted_rankscore",
+    "esm1b": "dbnsfp.esm1b.rankscore",
+    "eve": "dbnsfp.eve.rankscore",
+    "polyphen2_hdiv": "dbnsfp.polyphen2.hdiv.rankscore",
+    "mutationassessor": "dbnsfp.mutationassessor.rankscore",
+    "gerp91": "dbnsfp.gerp.91_mammals.rankscore",  # GERP++ has "++" in its API name, which the URL mangles
+}
+
+# A score column is only recommended to later steps if few values are missing.
+# Gaps follow the gene (several tools skip huge genes like TTN) and the gene
+# follows the label, so filling the gaps in would leak the answer.
+MAX_MISSING_SHARE = 0.30
+
+# gnomAD populations. The first three play our hospitals.
+SITE_POPULATIONS = {"nfe": "site_oslo", "sas": "site_karachi", "afr": "site_lagos"}
+OTHER_POPULATIONS = ["eas", "amr", "fin", "asj"]
+
+# "Population-discordant": common in one site population, at least ten times
+# rarer in another. Step 5 looks at these variants separately.
+DISCORDANT_MIN_FREQUENCY = 1e-3
+DISCORDANT_FOLD = 10
+FREQUENCY_FLOOR = 1e-5
+
+# ClinVar review status -> gold stars. Records with no stars are ignored.
+REVIEW_STARS = {
+    "practice guideline": 4,
+    "reviewed by expert panel": 3,
+    "criteria provided, multiple submitters, no conflicts": 2,
+    "criteria provided, single submitter": 1,
+}
+PATHOGENIC_TERMS = {"pathogenic", "likely pathogenic"}
+BENIGN_TERMS = {"benign", "likely benign"}
+
+
+def column_order() -> list[str]:
+    """Left to right: what a person wants to read first, what the code needs last."""
+    sites = list(SITE_POPULATIONS)
+    return (
+        ["name", "gene", "verdict", "label", "stars"]
+        + [f"af_{pop}" for pop in sites]
+        + ["pop_discordant"]
+        + list(SCORES)
+        + ["af_global"]
+        + [f"af_{pop}" for pop in OTHER_POPULATIONS]
+        + ["in_gnomad"]
+        + [f"{count}_{pop}" for pop in sites for count in ("ac", "an")]
+        + ["variant_id", "clinvar_id"]
+    )
+
+
+# ---------------------------------------------------------------------------
+# The label: what did ClinVar's experts say?
+# ---------------------------------------------------------------------------
+def clinvar_verdict(records) -> tuple[str | None, int, str]:
+    """Return (verdict, best_stars, why_dropped).
+
+    A variant gets a verdict only when every starred ClinVar record agrees:
+    all pathogenic / likely pathogenic, or all benign / likely benign.
+    One "uncertain" or "conflicting" record is enough to drop it.
+    """
+    if isinstance(records, dict):
+        records = [records]
+
+    said_pathogenic = said_benign = said_unsure = False
+    best_stars = 0
+    for record in records or []:
+        if not isinstance(record, dict):
+            continue
+        stars = REVIEW_STARS.get(str(record.get("review_status", "")).strip().lower(), 0)
+        if stars == 0:
+            continue
+        best_stars = max(best_stars, stars)
+        for term in re.split(r"[,/;]", str(record.get("clinical_significance", "")).lower()):
+            term = term.strip()
+            said_pathogenic |= term in PATHOGENIC_TERMS
+            said_benign |= term in BENIGN_TERMS
+            said_unsure |= "uncertain" in term or "conflicting" in term
+
+    if best_stars == 0:
+        return None, 0, "no record with review stars"
+    if said_unsure:
+        return None, best_stars, "uncertain or conflicting"
+    if said_pathogenic and said_benign:
+        return None, best_stars, "records disagree"
+    if said_pathogenic:
+        return "pathogenic", best_stars, ""
+    if said_benign:
+        return "benign", best_stars, ""
+    return None, best_stars, "no pathogenic or benign call"
+
+
+# ---------------------------------------------------------------------------
+# One API record -> one table row
+# ---------------------------------------------------------------------------
+def build_row(record: dict, gene: str) -> tuple[dict | None, str]:
+    verdict, stars, why_dropped = clinvar_verdict(get_nested(record, "clinvar.rcv"))
+    if verdict is None:
+        return None, why_dropped
+
+    row = {
+        "name": readable_name(record, gene),
+        "gene": gene,
+        "verdict": verdict,
+        "label": int(verdict == "pathogenic"),
+        "stars": stars,
+        "variant_id": record["_id"],
+        "clinvar_id": first_item(get_nested(record, "clinvar.variant_id")),
+    }
+    row.update(read_scores(record))
+    row.update(read_frequencies(record))
+    row["pop_discordant"] = int(is_population_discordant(row))
+    return row, ""
+
+
+def readable_name(record: dict, gene: str) -> str:
+    """'MYH7 R403Q' = in gene MYH7, amino acid R at position 403 became Q."""
+    before = first_item(get_nested(record, "dbnsfp.aa.ref"))
+    position = first_item(get_nested(record, "dbnsfp.aa.pos"))
+    after = first_item(get_nested(record, "dbnsfp.aa.alt"))
+    if before and position and after:
+        return f"{gene} {before}{position}{after}"
+    return f"{gene} {record['_id']}"
+
+
+def read_scores(record: dict) -> dict:
+    return {column: to_number(get_nested(record, path)) for column, path in SCORES.items()}
+
+
+def read_frequencies(record: dict) -> dict:
+    def gnomad(path: str) -> float:
+        value = to_number(get_nested(record, f"gnomad_exome.{path}"))
+        return 0.0 if math.isnan(value) else value  # never seen in gnomAD = frequency zero
+
+    row = {"in_gnomad": int("gnomad_exome" in record), "af_global": gnomad("af.af")}
+    for pop in [*SITE_POPULATIONS, *OTHER_POPULATIONS]:
+        row[f"af_{pop}"] = gnomad(f"af.af_{pop}")
+    for pop in SITE_POPULATIONS:
+        row[f"ac_{pop}"] = int(gnomad(f"ac.ac_{pop}"))  # copies of the variant seen
+        row[f"an_{pop}"] = int(gnomad(f"an.an_{pop}"))  # gene copies looked at
+    return row
+
+
+def is_population_discordant(row: dict) -> bool:
+    site_frequencies = [row[f"af_{pop}"] for pop in SITE_POPULATIONS]
+    highest, lowest = max(site_frequencies), min(site_frequencies)
+    return (
+        highest >= DISCORDANT_MIN_FREQUENCY
+        and highest >= DISCORDANT_FOLD * max(lowest, FREQUENCY_FLOOR)
+    )
+
+
+def get_nested(record, dotted_path: str):
+    """get_nested(r, 'a.b.c') -> r['a']['b']['c'], or None. Lists: use the first item."""
+    value = record
+    for key in dotted_path.split("."):
+        value = first_item(value)
+        if not isinstance(value, dict):
+            return None
+        value = value.get(key)
+    return value
+
+
+def first_item(value):
+    if isinstance(value, list):
+        return value[0] if value else None
+    return value
+
+
+def to_number(value) -> float:
+    """A float. For a list (one score per transcript) the highest. NaN if missing."""
+    if isinstance(value, list):
+        numbers = [n for n in map(to_number, value) if not math.isnan(n)]
+        return max(numbers) if numbers else math.nan
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return math.nan
+
+
+# ---------------------------------------------------------------------------
+# Download
+# ---------------------------------------------------------------------------
+SESSION = requests.Session()
+SESSION.headers["User-Agent"] = "team12-fl-clinical-diagnostics (hackathon)"
+
+
+def fields_to_request() -> str:
+    frequencies = ["gnomad_exome.af.af"]
+    frequencies += [f"gnomad_exome.af.af_{pop}" for pop in [*SITE_POPULATIONS, *OTHER_POPULATIONS]]
+    frequencies += [f"gnomad_exome.{c}.{c}_{pop}" for pop in SITE_POPULATIONS for c in ("ac", "an")]
+    clinvar = ["clinvar.variant_id", "clinvar.rcv.clinical_significance", "clinvar.rcv.review_status"]
+    amino_acids = ["dbnsfp.aa.ref", "dbnsfp.aa.pos", "dbnsfp.aa.alt"]
+    return ",".join(clinvar + amino_acids + list(SCORES.values()) + frequencies)
+
+
+def download_gene(gene: str, refresh: bool) -> list[dict]:
+    cache_file = CACHE_DIR / f"{gene}.json"
+    if cache_file.exists() and not refresh:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+
+    # Missense only: AlphaMissense exists only for missense variants.
+    # The pathogenic/benign filter just keeps the download small;
+    # the real decision is made locally in clinvar_verdict().
+    query = (
+        f"clinvar.gene.symbol:{gene} AND _exists_:dbnsfp.alphamissense "
+        "AND clinvar.rcv.clinical_significance:(pathogenic OR benign)"
+    )
+    page = ask_api({"q": query, "fields": fields_to_request(), "assembly": GENOME_BUILD, "fetch_all": "true"})
+    expected = page.get("total", 0)
+    records = list(page.get("hits", []))
+    while page.get("_scroll_id") and len(records) < expected:
+        time.sleep(0.2)
+        page = ask_api({"scroll_id": page["_scroll_id"]})
+        if not page.get("hits"):
+            break
+        records.extend(page["hits"])
+
+    cache_file.write_text(json.dumps(records), encoding="utf-8")
+    return records
+
+
+def ask_api(params: dict) -> dict:
+    """GET with retries. 'No more pages' arrives as a 4xx with a JSON body: return it."""
+    for attempt in range(6):
+        try:
+            response = SESSION.get(API_URL, params=params, timeout=90)
+            if response.status_code in (200, 400, 404):
+                return response.json()
+        except (requests.RequestException, ValueError):
+            pass
+        time.sleep(2**attempt)
+    raise RuntimeError(f"myvariant.info kept failing for: {params}")
+
+
+def read_gene_panel(path: Path) -> list[str]:
+    lines = (line.split("#", 1)[0].strip() for line in path.read_text(encoding="utf-8").splitlines())
+    return list(dict.fromkeys(line for line in lines if line))
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Build data/variants.csv from myvariant.info")
+    parser.add_argument("--refresh", action="store_true", help="ignore cached downloads")
+    parser.add_argument("--genes", help="comma-separated genes instead of the whole panel")
+    parser.add_argument("--out", type=Path, default=DATA_DIR / "variants.csv", help="where to write the table")
+    args = parser.parse_args()
+
+    genes = args.genes.split(",") if args.genes else read_gene_panel(GENE_PANEL)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    rows_by_id: dict[str, dict] = {}
+    dropped = Counter()
+    genes_with_nothing = []
+    downloaded = 0
+
+    for number, gene in enumerate(genes, 1):
+        records = download_gene(gene.strip(), args.refresh)
+        downloaded += len(records)
+        rows_before = len(rows_by_id)
+        for record in records:
+            if record["_id"] in rows_by_id:
+                dropped["already listed under another gene"] += 1
+                continue
+            row, why_dropped = build_row(record, gene.strip())
+            if row is None:
+                dropped[why_dropped] += 1
+            else:
+                rows_by_id[record["_id"]] = row
+        kept = len(rows_by_id) - rows_before
+        print(f"[{number:>2}/{len(genes)}] {gene:<8} downloaded {len(records):>5}  kept {kept:>5}", flush=True)
+        if not records:
+            genes_with_nothing.append(gene)
+
+    if not rows_by_id:
+        print("No rows kept. Check the gene names and your connection.", file=sys.stderr)
+        return 1
+
+    table = tidy(pd.DataFrame(rows_by_id.values()))
+    try:
+        table.to_csv(args.out, index=False)
+    except PermissionError:
+        print(f"\nCannot write {args.out}. It is open in another program, probably Excel. Close it and run again.", file=sys.stderr)
+        return 1
+
+    print_summary(table, downloaded, dropped)
+    write_column_list(table, args.out.with_name("columns.json"))
+    print(f"wrote {args.out}  ({len(table)} rows x {table.shape[1]} columns)")
+    if genes_with_nothing:
+        print(
+            f"\nWARNING: nothing found for {', '.join(genes_with_nothing)}. myvariant.info lists "
+            "ClinVar entries for these genes but has no dbNSFP scores for them in its hg38 index."
+        )
+    return 0
+
+
+def tidy(table: pd.DataFrame) -> pd.DataFrame:
+    table = table[column_order()].sort_values(["gene", "name", "variant_id"])
+    frequency_columns = [c for c in table.columns if c.startswith("af_")]
+    return table.round({**dict.fromkeys(SCORES, 4), **dict.fromkeys(frequency_columns, 6)})
+
+
+def usable_scores(table: pd.DataFrame) -> tuple[list[str], list[str]]:
+    missing_share = table[list(SCORES)].isna().mean()
+    usable = [s for s in SCORES if missing_share[s] <= MAX_MISSING_SHARE]
+    too_sparse = [s for s in SCORES if missing_share[s] > MAX_MISSING_SHARE]
+    return usable, too_sparse
+
+
+def write_column_list(table: pd.DataFrame, path: Path) -> None:
+    """Later steps read this instead of hard-coding column names."""
+    usable, too_sparse = usable_scores(table)
+    column_list = {
+        "id": "variant_id",
+        "label": "label",
+        "features": usable,
+        "features_too_sparse": too_sparse,
+        "af_global": "af_global",
+        "af_by_site": {site: f"af_{pop}" for pop, site in SITE_POPULATIONS.items()},
+        "evaluation_subset": "pop_discordant",
+    }
+    path.write_text(json.dumps(column_list, indent=2), encoding="utf-8")
+    print(f"wrote {path}")
+
+
+def print_summary(table: pd.DataFrame, downloaded: int, dropped: Counter) -> None:
+    pathogenic = int(table.label.sum())
+    print("\n================ SUMMARY ================")
+    print(f"downloaded {downloaded} records, kept {len(table)}: {pathogenic} pathogenic, {len(table) - pathogenic} benign")
+    for why, count in dropped.most_common():
+        print(f"  dropped {count:>5}  {why}")
+
+    per_gene = table.groupby("gene").label.agg(rows="size", pathogenic="sum")
+    per_gene["benign"] = per_gene.rows - per_gene.pathogenic
+    print("\nbiggest genes:")
+    print(per_gene.sort_values("rows", ascending=False).head(10).to_string())
+
+    usable, too_sparse = usable_scores(table)
+    print(f"\nscores to use ({len(usable)}): {', '.join(usable)}")
+    print(f"too many gaps, over {MAX_MISSING_SHARE:.0%} missing: {', '.join(too_sparse) or 'none'}")
+
+    discordant = table[table.pop_discordant == 1]
+    print(f"\nfound in gnomAD: {int(table.in_gnomad.sum())} of {len(table)}")
+    print(
+        f"population-discordant: {len(discordant)} "
+        f"({int(discordant.label.sum())} pathogenic, {int((discordant.label == 0).sum())} benign)"
+    )
+
+    print("\na few rows:")
+    preview = ["name", "verdict", "stars", "af_nfe", "af_sas", "af_afr", "alphamissense", "cadd"]
+    sample = pd.concat([discordant.head(3), table[table.label == 1].head(3)])
+    print(sample[preview].to_string(index=False))
+    print()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,8 @@
+# Generated data is never committed: rebuild it with scripts/01_build_table.py.
+# Upstream scores (dbNSFP, CADD) carry non-commercial / no-derivatives terms,
+# so we share the recipe, not the table.
+data/
+
+.venv/
+__pycache__/
+*.pyc

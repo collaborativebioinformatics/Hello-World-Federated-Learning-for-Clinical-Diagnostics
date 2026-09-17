@@ -1,0 +1,10 @@
+[project]
+name = "fl-clinical-diagnostics"
+version = "0.1.0"
+description = "Team 12: federated variant classification with population context"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2",
+    "requests>=2.32",
+]
