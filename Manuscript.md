@@ -238,10 +238,6 @@ uv run python scripts/04_federated_train.py
 
 and the patient query starts with `uv run python scripts/06_query_tui.py`. The tables themselves are not redistributed because of the dbNSFP licence. `docs/data_contract.md` describes every file and column, and `scripts/fetch_references.py` retrieves the reference list of this manuscript from PubMed and arXiv.
 
-## Author contributions
-
-M.P. built the gene panel, the variant table, the first version of the hospital simulation and the patient query. Y.L. reviewed and revised the simulation and the test split and wrote the local training, the federated training and their evaluation. [Contributions of S.S. and O.B. to be added by the team.]
-
 ## Acknowledgements
 
 [Hackathon name, organisers and compute sponsors to be added.]
