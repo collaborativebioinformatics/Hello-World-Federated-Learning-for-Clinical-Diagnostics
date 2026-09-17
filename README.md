@@ -128,6 +128,7 @@ The seed is fixed, so everyone gets identical files, and step 2 ends by confirmi
 
 | | |
 |---|---|
+| [Manuscript.md](Manuscript.md) | the write-up with methods, results, limits and references, also as a [PDF](Manuscript.pdf) |
 | [docs/build_notes.md](docs/build_notes.md) | every step with example tables, the experiment grid, data sources, decisions, and how to update the pictures |
 | [docs/step3_results.md](docs/step3_results.md) | the model, every result table and how to read them |
 | [docs/step4_results.md](docs/step4_results.md) | federated training with NVIDIA FLARE: method, the five runs and their limits |

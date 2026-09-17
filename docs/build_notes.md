@@ -3,7 +3,7 @@
 Working detail for the team: every step with example tables, the experiment grid, what each build
 produced, data sources and the decisions taken along the way. It was the front page while the
 project was being built and is kept here word for word. For the short version see the
-[README](../README.md).
+[README](../README.md), and for the write-up see [Manuscript.md](../Manuscript.md).
 
 ---
 

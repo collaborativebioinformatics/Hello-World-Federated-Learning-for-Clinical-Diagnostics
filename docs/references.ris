@@ -1,0 +1,660 @@
+TY  - JOUR
+ID  - richards2015
+AU  - Richards, Sue
+AU  - Aziz, Nazneen
+AU  - Bale, Sherri
+AU  - Bick, David
+AU  - Das, Soma
+AU  - Gastier-Foster, Julie
+AU  - Grody, Wayne W
+AU  - Hegde, Madhuri
+AU  - Lyon, Elaine
+AU  - Spector, Elaine
+AU  - Voelkerding, Karl
+AU  - Rehm, Heidi L
+AU  - ACMG Laboratory Quality Assurance Committee
+TI  - Standards and guidelines for the interpretation of sequence variants: a joint consensus recommendation of the American College of Medical Genetics and Genomics and the Association for Molecular Pathology.
+PY  - 2015
+JO  - Genet Med
+VL  - 17
+IS  - 5
+SP  - 405-24
+DO  - 10.1038/gim.2015.30
+AN  - 25741868
+ER  - 
+
+TY  - JOUR
+ID  - manrai2016
+AU  - Manrai, Arjun K
+AU  - Funke, Birgit H
+AU  - Rehm, Heidi L
+AU  - Olesen, Morten S
+AU  - Maron, Bradley A
+AU  - Szolovits, Peter
+AU  - Margulies, David M
+AU  - Loscalzo, Joseph
+AU  - Kohane, Isaac S
+TI  - Genetic Misdiagnoses and the Potential for Health Disparities.
+PY  - 2016
+JO  - N Engl J Med
+VL  - 375
+IS  - 7
+SP  - 655-65
+DO  - 10.1056/NEJMsa1507092
+AN  - 27532831
+ER  - 
+
+TY  - JOUR
+ID  - popejoy2016
+AU  - Popejoy, Alice B
+AU  - Fullerton, Stephanie M
+TI  - Genomics is failing on diversity.
+PY  - 2016
+JO  - Nature
+VL  - 538
+IS  - 7624
+SP  - 161-164
+DO  - 10.1038/538161a
+AN  - 27734877
+ER  - 
+
+TY  - JOUR
+ID  - karczewski2020
+AU  - Karczewski, Konrad J
+AU  - Francioli, Laurent C
+AU  - Tiao, Grace
+AU  - Cummings, Beryl B
+AU  - Alföldi, Jessica
+AU  - Wang, Qingbo
+AU  - Collins, Ryan L
+AU  - Laricchia, Kristen M
+AU  - Ganna, Andrea
+AU  - Birnbaum, Daniel P
+AU  - Gauthier, Laura D
+AU  - Brand, Harrison
+AU  - Solomonson, Matthew
+AU  - Watts, Nicholas A
+AU  - Rhodes, Daniel
+AU  - Singer-Berk, Moriel
+AU  - England, Eleina M
+AU  - Seaby, Eleanor G
+AU  - Kosmicki, Jack A
+AU  - Walters, Raymond K
+AU  - Tashman, Katherine
+AU  - Farjoun, Yossi
+AU  - Banks, Eric
+AU  - Poterba, Timothy
+AU  - Wang, Arcturus
+AU  - Seed, Cotton
+AU  - Whiffin, Nicola
+AU  - Chong, Jessica X
+AU  - Samocha, Kaitlin E
+AU  - Pierce-Hoffman, Emma
+AU  - Zappala, Zachary
+AU  - O'Donnell-Luria, Anne H
+AU  - Minikel, Eric Vallabh
+AU  - Weisburd, Ben
+AU  - Lek, Monkol
+AU  - Ware, James S
+AU  - Vittal, Christopher
+AU  - Armean, Irina M
+AU  - Bergelson, Louis
+AU  - Cibulskis, Kristian
+AU  - Connolly, Kristen M
+AU  - Covarrubias, Miguel
+AU  - Donnelly, Stacey
+AU  - Ferriera, Steven
+AU  - Gabriel, Stacey
+AU  - Gentry, Jeff
+AU  - Gupta, Namrata
+AU  - Jeandet, Thibault
+AU  - Kaplan, Diane
+AU  - Llanwarne, Christopher
+AU  - Munshi, Ruchi
+AU  - Novod, Sam
+AU  - Petrillo, Nikelle
+AU  - Roazen, David
+AU  - Ruano-Rubio, Valentin
+AU  - Saltzman, Andrea
+AU  - Schleicher, Molly
+AU  - Soto, Jose
+AU  - Tibbetts, Kathleen
+AU  - Tolonen, Charlotte
+AU  - Wade, Gordon
+AU  - Talkowski, Michael E
+AU  - Genome Aggregation Database Consortium
+AU  - Neale, Benjamin M
+AU  - Daly, Mark J
+AU  - MacArthur, Daniel G
+TI  - The mutational constraint spectrum quantified from variation in 141,456 humans.
+PY  - 2020
+JO  - Nature
+VL  - 581
+IS  - 7809
+SP  - 434-443
+DO  - 10.1038/s41586-020-2308-7
+AN  - 32461654
+ER  - 
+
+TY  - JOUR
+ID  - rieke2020
+AU  - Rieke, Nicola
+AU  - Hancox, Jonny
+AU  - Li, Wenqi
+AU  - Milletarì, Fausto
+AU  - Roth, Holger R
+AU  - Albarqouni, Shadi
+AU  - Bakas, Spyridon
+AU  - Galtier, Mathieu N
+AU  - Landman, Bennett A
+AU  - Maier-Hein, Klaus
+AU  - Ourselin, Sébastien
+AU  - Sheller, Micah
+AU  - Summers, Ronald M
+AU  - Trask, Andrew
+AU  - Xu, Daguang
+AU  - Baust, Maximilian
+AU  - Cardoso, M Jorge
+TI  - The future of digital health with federated learning.
+PY  - 2020
+JO  - NPJ Digit Med
+VL  - 3
+SP  - 119
+DO  - 10.1038/s41746-020-00323-1
+AN  - 33015372
+ER  - 
+
+TY  - GEN
+ID  - mcmahan2017
+AU  - McMahan, H. Brendan
+AU  - Moore, Eider
+AU  - Ramage, Daniel
+AU  - Hampson, Seth
+AU  - Agüera y Arcas, Blaise
+TI  - Communication-Efficient Learning of Deep Networks from Decentralized Data
+PY  - 2016
+PB  - arXiv
+UR  - https://arxiv.org/abs/1602.05629
+ER  - 
+
+TY  - GEN
+ID  - roth2022
+AU  - Roth, Holger R.
+AU  - Cheng, Yan
+AU  - Wen, Yuhong
+AU  - Yang, Isaac
+AU  - Xu, Ziyue
+AU  - Hsieh, Yuan-Ting
+AU  - Kersten, Kristopher
+AU  - Harouni, Ahmed
+AU  - Zhao, Can
+AU  - Lu, Kevin
+AU  - Zhang, Zhihong
+AU  - Li, Wenqi
+AU  - Myronenko, Andriy
+AU  - Yang, Dong
+AU  - Yang, Sean
+AU  - Rieke, Nicola
+AU  - Quraini, Abood
+AU  - Chen, Chester
+AU  - Xu, Daguang
+AU  - Ma, Nic
+AU  - Dogra, Prerna
+AU  - Flores, Mona
+AU  - Feng, Andrew
+TI  - NVIDIA FLARE: Federated Learning from Simulation to Real-World
+PY  - 2022
+PB  - arXiv
+UR  - https://arxiv.org/abs/2210.13291
+ER  - 
+
+TY  - JOUR
+ID  - rambla2022
+AU  - Rambla, Jordi
+AU  - Baudis, Michael
+AU  - Ariosa, Roberto
+AU  - Beck, Tim
+AU  - Fromont, Lauren A
+AU  - Navarro, Arcadi
+AU  - Paloots, Rahel
+AU  - Rueda, Manuel
+AU  - Saunders, Gary
+AU  - Singh, Babita
+AU  - Spalding, John D
+AU  - Törnroos, Juha
+AU  - Vasallo, Claudia
+AU  - Veal, Colin D
+AU  - Brookes, Anthony J
+TI  - Beacon v2 and Beacon networks: A "lingua franca" for federated data discovery in biomedical genomics, and beyond.
+PY  - 2022
+JO  - Hum Mutat
+VL  - 43
+IS  - 6
+SP  - 791-799
+DO  - 10.1002/humu.24369
+AN  - 35297548
+ER  - 
+
+TY  - JOUR
+ID  - montalvo2025
+AU  - Montalvo, Nigreisy
+AU  - Requena, Francisco
+AU  - Capriotti, Emidio
+AU  - Rausell, Antonio
+TI  - Federated learning for the pathogenicity annotation of genetic variants in multi-site clinical settings.
+PY  - 2025
+JO  - Bioinformatics
+VL  - 41
+IS  - 10
+DO  - 10.1093/bioinformatics/btaf523
+AN  - 40973651
+ER  - 
+
+TY  - JOUR
+ID  - martin2019
+AU  - Martin, Antonio Rueda
+AU  - Williams, Eleanor
+AU  - Foulger, Rebecca E
+AU  - Leigh, Sarah
+AU  - Daugherty, Louise C
+AU  - Niblock, Olivia
+AU  - Leong, Ivone U S
+AU  - Smith, Katherine R
+AU  - Gerasimenko, Oleg
+AU  - Haraldsdottir, Eik
+AU  - Thomas, Ellen
+AU  - Scott, Richard H
+AU  - Baple, Emma
+AU  - Tucci, Arianna
+AU  - Brittain, Helen
+AU  - de Burca, Anna
+AU  - Ibañez, Kristina
+AU  - Kasperaviciute, Dalia
+AU  - Smedley, Damian
+AU  - Caulfield, Mark
+AU  - Rendon, Augusto
+AU  - McDonagh, Ellen M
+TI  - PanelApp crowdsources expert knowledge to establish consensus diagnostic gene panels.
+PY  - 2019
+JO  - Nat Genet
+VL  - 51
+IS  - 11
+SP  - 1560-1565
+DO  - 10.1038/s41588-019-0528-2
+AN  - 31676867
+ER  - 
+
+TY  - JOUR
+ID  - xin2016
+AU  - Xin, Jiwen
+AU  - Mark, Adam
+AU  - Afrasiabi, Cyrus
+AU  - Tsueng, Ginger
+AU  - Juchler, Moritz
+AU  - Gopal, Nikhil
+AU  - Stupp, Gregory S
+AU  - Putman, Timothy E
+AU  - Ainscough, Benjamin J
+AU  - Griffith, Obi L
+AU  - Torkamani, Ali
+AU  - Whetzel, Patricia L
+AU  - Mungall, Christopher J
+AU  - Mooney, Sean D
+AU  - Su, Andrew I
+AU  - Wu, Chunlei
+TI  - High-performance web services for querying gene and variant annotation.
+PY  - 2016
+JO  - Genome Biol
+VL  - 17
+IS  - 1
+SP  - 91
+DO  - 10.1186/s13059-016-0953-9
+AN  - 27154141
+ER  - 
+
+TY  - JOUR
+ID  - landrum2018
+AU  - Landrum, Melissa J
+AU  - Lee, Jennifer M
+AU  - Benson, Mark
+AU  - Brown, Garth R
+AU  - Chao, Chen
+AU  - Chitipiralla, Shanmuga
+AU  - Gu, Baoshan
+AU  - Hart, Jennifer
+AU  - Hoffman, Douglas
+AU  - Jang, Wonhee
+AU  - Karapetyan, Karen
+AU  - Katz, Kenneth
+AU  - Liu, Chunlei
+AU  - Maddipatla, Zenith
+AU  - Malheiro, Adriana
+AU  - McDaniel, Kurt
+AU  - Ovetsky, Michael
+AU  - Riley, George
+AU  - Zhou, George
+AU  - Holmes, J Bradley
+AU  - Kattman, Brandi L
+AU  - Maglott, Donna R
+TI  - ClinVar: improving access to variant interpretations and supporting evidence.
+PY  - 2018
+JO  - Nucleic Acids Res
+VL  - 46
+IS  - D1
+SP  - D1062-D1067
+DO  - 10.1093/nar/gkx1153
+AN  - 29165669
+ER  - 
+
+TY  - JOUR
+ID  - liu2020
+AU  - Liu, Xiaoming
+AU  - Li, Chang
+AU  - Mou, Chengcheng
+AU  - Dong, Yibo
+AU  - Tu, Yicheng
+TI  - dbNSFP v4: a comprehensive database of transcript-specific functional predictions and annotations for human nonsynonymous and splice-site SNVs.
+PY  - 2020
+JO  - Genome Med
+VL  - 12
+IS  - 1
+SP  - 103
+DO  - 10.1186/s13073-020-00803-9
+AN  - 33261662
+ER  - 
+
+TY  - JOUR
+ID  - grimm2015
+AU  - Grimm, Dominik G
+AU  - Azencott, Chloé-Agathe
+AU  - Aicheler, Fabian
+AU  - Gieraths, Udo
+AU  - MacArthur, Daniel G
+AU  - Samocha, Kaitlin E
+AU  - Cooper, David N
+AU  - Stenson, Peter D
+AU  - Daly, Mark J
+AU  - Smoller, Jordan W
+AU  - Duncan, Laramie E
+AU  - Borgwardt, Karsten M
+TI  - The evaluation of tools used to predict the impact of missense variants is hindered by two types of circularity.
+PY  - 2015
+JO  - Hum Mutat
+VL  - 36
+IS  - 5
+SP  - 513-23
+DO  - 10.1002/humu.22768
+AN  - 25684150
+ER  - 
+
+TY  - JOUR
+ID  - whiffin2017
+AU  - Whiffin, Nicola
+AU  - Minikel, Eric
+AU  - Walsh, Roddy
+AU  - O'Donnell-Luria, Anne H
+AU  - Karczewski, Konrad
+AU  - Ing, Alexander Y
+AU  - Barton, Paul J R
+AU  - Funke, Birgit
+AU  - Cook, Stuart A
+AU  - MacArthur, Daniel
+AU  - Ware, James S
+TI  - Using high-resolution variant frequencies to empower clinical genome interpretation.
+PY  - 2017
+JO  - Genet Med
+VL  - 19
+IS  - 10
+SP  - 1151-1158
+DO  - 10.1038/gim.2017.26
+AN  - 28518168
+ER  - 
+
+TY  - JOUR
+ID  - jacobson1997
+AU  - Jacobson, D R
+AU  - Pastore, R D
+AU  - Yaghoubian, R
+AU  - Kane, I
+AU  - Gallo, G
+AU  - Buck, F S
+AU  - Buxbaum, J N
+TI  - Variant-sequence transthyretin (isoleucine 122) in late-onset cardiac amyloidosis in black Americans.
+PY  - 1997
+JO  - N Engl J Med
+VL  - 336
+IS  - 7
+SP  - 466-73
+DO  - 10.1056/NEJM199702133360703
+AN  - 9017939
+ER  - 
+
+TY  - JOUR
+ID  - cheng2023
+AU  - Cheng, Jun
+AU  - Novati, Guido
+AU  - Pan, Joshua
+AU  - Bycroft, Clare
+AU  - Žemgulytė, Akvilė
+AU  - Applebaum, Taylor
+AU  - Pritzel, Alexander
+AU  - Wong, Lai Hong
+AU  - Zielinski, Michal
+AU  - Sargeant, Tobias
+AU  - Schneider, Rosalia G
+AU  - Senior, Andrew W
+AU  - Jumper, John
+AU  - Hassabis, Demis
+AU  - Kohli, Pushmeet
+AU  - Avsec, Žiga
+TI  - Accurate proteome-wide missense variant effect prediction with AlphaMissense.
+PY  - 2023
+JO  - Science
+VL  - 381
+IS  - 6664
+SP  - eadg7492
+DO  - 10.1126/science.adg7492
+AN  - 37733863
+ER  - 
+
+TY  - JOUR
+ID  - shringarpure2015
+AU  - Shringarpure, Suyash S
+AU  - Bustamante, Carlos D
+TI  - Privacy Risks from Genomic Data-Sharing Beacons.
+PY  - 2015
+JO  - Am J Hum Genet
+VL  - 97
+IS  - 5
+SP  - 631-46
+DO  - 10.1016/j.ajhg.2015.09.010
+AN  - 26522470
+ER  - 
+
+TY  - JOUR
+ID  - gargano2024
+AU  - Gargano, Michael A
+AU  - Matentzoglu, Nicolas
+AU  - Coleman, Ben
+AU  - Addo-Lartey, Eunice B
+AU  - Anagnostopoulos, Anna V
+AU  - Anderton, Joel
+AU  - Avillach, Paul
+AU  - Bagley, Anita M
+AU  - Bakštein, Eduard
+AU  - Balhoff, James P
+AU  - Baynam, Gareth
+AU  - Bello, Susan M
+AU  - Berk, Michael
+AU  - Bertram, Holli
+AU  - Bishop, Somer
+AU  - Blau, Hannah
+AU  - Bodenstein, David F
+AU  - Botas, Pablo
+AU  - Boztug, Kaan
+AU  - Čady, Jolana
+AU  - Callahan, Tiffany J
+AU  - Cameron, Rhiannon
+AU  - Carbon, Seth J
+AU  - Castellanos, Francisco
+AU  - Caufield, J Harry
+AU  - Chan, Lauren E
+AU  - Chute, Christopher G
+AU  - Cruz-Rojo, Jaime
+AU  - Dahan-Oliel, Noémi
+AU  - Davids, Jon R
+AU  - de Dieuleveult, Maud
+AU  - de Souza, Vinicius
+AU  - de Vries, Bert B A
+AU  - de Vries, Esther
+AU  - DePaulo, J Raymond
+AU  - Derfalvi, Beata
+AU  - Dhombres, Ferdinand
+AU  - Diaz-Byrd, Claudia
+AU  - Dingemans, Alexander J M
+AU  - Donadille, Bruno
+AU  - Duyzend, Michael
+AU  - Elfeky, Reem
+AU  - Essaid, Shahim
+AU  - Fabrizzi, Carolina
+AU  - Fico, Giovanna
+AU  - Firth, Helen V
+AU  - Freudenberg-Hua, Yun
+AU  - Fullerton, Janice M
+AU  - Gabriel, Davera L
+AU  - Gilmour, Kimberly
+AU  - Giordano, Jessica
+AU  - Goes, Fernando S
+AU  - Moses, Rachel Gore
+AU  - Green, Ian
+AU  - Griese, Matthias
+AU  - Groza, Tudor
+AU  - Gu, Weihong
+AU  - Guthrie, Julia
+AU  - Gyori, Benjamin
+AU  - Hamosh, Ada
+AU  - Hanauer, Marc
+AU  - Hanušová, Kateřina
+AU  - He, Yongqun Oliver
+AU  - Hegde, Harshad
+AU  - Helbig, Ingo
+AU  - Holasová, Kateřina
+AU  - Hoyt, Charles Tapley
+AU  - Huang, Shangzhi
+AU  - Hurwitz, Eric
+AU  - Jacobsen, Julius O B
+AU  - Jiang, Xiaofeng
+AU  - Joseph, Lisa
+AU  - Keramatian, Kamyar
+AU  - King, Bryan
+AU  - Knoflach, Katrin
+AU  - Koolen, David A
+AU  - Kraus, Megan L
+AU  - Kroll, Carlo
+AU  - Kusters, Maaike
+AU  - Ladewig, Markus S
+AU  - Lagorce, David
+AU  - Lai, Meng-Chuan
+AU  - Lapunzina, Pablo
+AU  - Laraway, Bryan
+AU  - Lewis-Smith, David
+AU  - Li, Xiarong
+AU  - Lucano, Caterina
+AU  - Majd, Marzieh
+AU  - Marazita, Mary L
+AU  - Martinez-Glez, Victor
+AU  - McHenry, Toby H
+AU  - McInnis, Melvin G
+AU  - McMurry, Julie A
+AU  - Mihulová, Michaela
+AU  - Millett, Caitlin E
+AU  - Mitchell, Philip B
+AU  - Moslerová, Veronika
+AU  - Narutomi, Kenji
+AU  - Nematollahi, Shahrzad
+AU  - Nevado, Julian
+AU  - Nierenberg, Andrew A
+AU  - Čajbiková, Nikola Novák
+AU  - Nurnberger, John I
+AU  - Ogishima, Soichi
+AU  - Olson, Daniel
+AU  - Ortiz, Abigail
+AU  - Pachajoa, Harry
+AU  - Perez de Nanclares, Guiomar
+AU  - Peters, Amy
+AU  - Putman, Tim
+AU  - Rapp, Christina K
+AU  - Rath, Ana
+AU  - Reese, Justin
+AU  - Rekerle, Lauren
+AU  - Roberts, Angharad M
+AU  - Roy, Suzy
+AU  - Sanders, Stephan J
+AU  - Schuetz, Catharina
+AU  - Schulte, Eva C
+AU  - Schulze, Thomas G
+AU  - Schwarz, Martin
+AU  - Scott, Katie
+AU  - Seelow, Dominik
+AU  - Seitz, Berthold
+AU  - Shen, Yiping
+AU  - Similuk, Morgan N
+AU  - Simon, Eric S
+AU  - Singh, Balwinder
+AU  - Smedley, Damian
+AU  - Smith, Cynthia L
+AU  - Smolinsky, Jake T
+AU  - Sperry, Sarah
+AU  - Stafford, Elizabeth
+AU  - Stefancsik, Ray
+AU  - Steinhaus, Robin
+AU  - Strawbridge, Rebecca
+AU  - Sundaramurthi, Jagadish Chandrabose
+AU  - Talapova, Polina
+AU  - Tenorio Castano, Jair A
+AU  - Tesner, Pavel
+AU  - Thomas, Rhys H
+AU  - Thurm, Audrey
+AU  - Turnovec, Marek
+AU  - van Gijn, Marielle E
+AU  - Vasilevsky, Nicole A
+AU  - Vlčková, Markéta
+AU  - Walden, Anita
+AU  - Wang, Kai
+AU  - Wapner, Ron
+AU  - Ware, James S
+AU  - Wiafe, Addo A
+AU  - Wiafe, Samuel A
+AU  - Wiggins, Lisa D
+AU  - Williams, Andrew E
+AU  - Wu, Chen
+AU  - Wyrwoll, Margot J
+AU  - Xiong, Hui
+AU  - Yalin, Nefize
+AU  - Yamamoto, Yasunori
+AU  - Yatham, Lakshmi N
+AU  - Yocum, Anastasia K
+AU  - Young, Allan H
+AU  - Yüksel, Zafer
+AU  - Zandi, Peter P
+AU  - Zankl, Andreas
+AU  - Zarante, Ignacio
+AU  - Zvolský, Miroslav
+AU  - Toro, Sabrina
+AU  - Carmody, Leigh C
+AU  - Harris, Nomi L
+AU  - Munoz-Torres, Monica C
+AU  - Danis, Daniel
+AU  - Mungall, Christopher J
+AU  - Köhler, Sebastian
+AU  - Haendel, Melissa A
+AU  - Robinson, Peter N
+TI  - The Human Phenotype Ontology in 2024: phenotypes around the world.
+PY  - 2024
+JO  - Nucleic Acids Res
+VL  - 52
+IS  - D1
+SP  - D1333-D1346
+DO  - 10.1093/nar/gkad1005
+AN  - 37953324
+ER  - 
