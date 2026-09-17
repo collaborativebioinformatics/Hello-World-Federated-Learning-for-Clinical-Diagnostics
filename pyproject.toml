@@ -8,4 +8,6 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
     "requests>=2.32",
+    "rich>=13",
+    "textual>=0.80",
 ]
