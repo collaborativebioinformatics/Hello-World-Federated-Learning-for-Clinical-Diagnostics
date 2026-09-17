@@ -72,14 +72,16 @@
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step next"><div class="num">3</div><div class="body">
-  <span class="pill">next · ML side</span><p class="title">Local training</p>
-  <p class="line">each site fits a small classifier on its own <code>verdicts.csv</code>, reading column names from <code>data/columns.json</code></p>
+<div class="step done"><div class="num">3</div><div class="body">
+  <span class="pill">done</span><p class="title">Local training</p>
+  <p class="line">logistic regression, 12 scores + log frequency = 14 weights · single-site and pooled baselines</p>
+  <p class="line">test AUC 0.97-0.98 in every cell, flat · frequency cuts discordant false alarms 15 to 2 of 183</p>
+  <p class="line">run <code>uv run python scripts/03_train_local.py</code> · numbers and reading in <code>docs/step3_results.md</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step todo"><div class="num">4</div><div class="body">
-  <span class="pill">ML side</span><p class="title">NVFlare: average the weights, sum the counts</p>
+<div class="step next"><div class="num">4</div><div class="body">
+  <span class="pill">next · ML side</span><p class="title">NVFlare: average the weights, sum the counts</p>
   <p class="line">two jobs in simulator mode · checked: NVFlare 2.9.0 installs on Windows with Python 3.12</p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>

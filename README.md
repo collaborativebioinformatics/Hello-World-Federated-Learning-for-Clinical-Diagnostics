@@ -157,19 +157,33 @@ Every run checks itself and stops rather than writing a split that is quietly wr
 
 ### Step 3. Each hospital trains on its own rows
 
-A small classifier, logistic regression or a two-layer MLP, that maps scores plus frequency to a probability of disease.
+**Logistic regression**, mapping scores plus frequency to a probability of disease.
 
 ```
 p(disease) = sigmoid( w1·CADD + w2·AlphaMis + … + wk·log(AF) + b )
 ```
 
-The weights `w` are what gets learned: how much to trust each score, and how strongly a high frequency should push toward harmless.
+Twelve prediction scores and one log frequency, so fourteen weights including
+the intercept. Small on purpose: weight averaging is clean for a linear model and
+a heuristic for anything deeper, our sites are non-IID by construction, and the
+claim we have to defend is a statement about one coefficient. A stronger model
+would also be better at what we do not want, recognising the gene.
 
-| site | weights after local training |
-|---|---|
-| Oslo | `[0.8, 2.1, −1.5]` |
-| Karachi | `[0.7, 2.3, −1.2]` |
-| Lagos | `[0.9, 1.9, −1.7]` |
+The weights `w` are what gets learned: how much to trust each score, and how
+strongly a high frequency should push toward harmless. Three of the fourteen,
+after real local training:
+
+| site | AlphaMissense | CADD | log(AF) |
+|---|---|---|---|
+| Oslo | 4.19 | 2.59 | −3.26 |
+| Karachi | 4.17 | 2.21 | −3.80 |
+| Lagos | 3.30 | 2.14 | −4.09 |
+
+Frequency comes out the second strongest input of thirteen and the only large
+negative one. The model learned the veto from expert verdicts without being told
+the rule, and the two hospitals whose patients gnomAD covers worst lean on it
+hardest. This table is why the model is linear: on an MLP it would be a SHAP plot
+and an argument.
 
 ### Step 4. NVFlare server averages the weights
 
@@ -270,15 +284,28 @@ Fallback: Flower, if the NVFlare simulator fights us for more than two hours on 
 
 Rows are training setups, columns are what the model is allowed to know. Every cell is scored per population on the held-out set.
 
-| training setup | population-blind (scores + one global AF) | population-aware (scores + per-population AF + patient's population) |
-|---|---|---|
-| Oslo only | baseline | |
-| Karachi only | baseline | |
-| Federated, FedAvg | | |
-| Federated, then tuned locally a few epochs | | |
-| Pooled | upper bound, not allowed in real life | |
+| training setup | test AUC, public frequency | test AUC, federated frequency | false alarms on the 183 discordant benign rows |
+|---|---|---|---|
+| Oslo only | 0.976 | 0.978 | 7 → 2 |
+| Karachi only | 0.976 | 0.978 | 7 → 2 |
+| Lagos only | 0.975 | 0.978 | 8 → 2 |
+| Federated, FedAvg | step 4 | step 4 | step 4 |
+| Pooled | 0.976 | 0.978 | 7 → 2 |
 
-The open question is the fourth row: does weight averaging wash out population-specific frequency evidence, and does a cheap per-site tuning step restore it? Report AUC on all held-out variants and again on the subset whose frequency differs strongly between populations, where the effect should be visible.
+Step 3 filled every row but the federated one, with **logistic regression**: 12
+prediction scores plus one log frequency, fourteen weights including the
+intercept. Full method and numbers in [docs/step3_results.md](docs/step3_results.md).
+
+Read that table twice. **The AUC column is flat** — training on 1,817 Karachi
+rows scores what training on all 6,417 does, to three decimals. A fourteen-weight
+model on these scores saturates long before 1,800 rows, so federation has no
+accuracy to add and step 4 will not change these numbers. **The false-alarm
+column is where the result is.**
+
+The open question for step 4 is the federated row, and step 3 has already
+narrowed it: since every single-site model matches pooled on AUC, the thing to
+check is not whether FedAvg wins but whether it loses anything, and whether
+averaging washes out the frequency coefficient that does the real work.
 
 Read "per population" as the frequency evidence the model is given, not as three slices of test rows. Splitting the test set by population leaves 12 pathogenic variants in the African slice and none at all in the two thirds of rows gnomAD never saw, so an AUC per slice would be noise. The comparison that carries the result is the same rows scored under different frequency evidence: today's public reference, one hospital's own patients, the three hospitals' counts combined, and the gnomAD ceiling. [docs/data_contract.md](docs/data_contract.md) defines the four. The test set carries a `pop` column for the secondary read, and step 2 prints each slice's positive count so nobody quotes one by accident.
 
@@ -327,6 +354,7 @@ uv sync
 uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp (already committed)
 uv run python scripts/01_build_table.py             # step 1, about 4 minutes, then cached
 uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, the hospital files
+uv run python scripts/03_train_local.py            # step 3, a few seconds, the baselines
 ```
 
 Two flags worth knowing:
@@ -334,6 +362,7 @@ Two flags worth knowing:
 ```
 uv run python scripts/01_build_table.py --refresh          # re-download from myvariant.info
 uv run python scripts/02_simulate_hospitals.py --self-check # break the split on purpose, expect it to stop
+uv run python scripts/03_train_local.py --self-check        # test the AUC and the fit against brute force
 ```
 
 **Step 1 is built.** It writes `data/variants.csv` and `data/columns.json`, the list of columns later steps should read instead of hard-coding. The table opens in Excel with the readable columns first: name, gene, verdict, stars, then the three site frequencies. Every column is explained in plain language in [docs/table_columns.md](docs/table_columns.md). `data/` is git-ignored because the upstream scores carry non-commercial terms, so we share the recipe and not the table.
@@ -399,6 +428,25 @@ Each hospital, from the 17 September 2026 build:
 Three things to read off that table. Oslo is the big lab and holds more than twice the variants, which is the imbalance federation has to survive. The variants where population matters sit mostly at the two small hospitals: Lagos alone holds 259 of them. And although Lagos sequences a fifth as many patients as Oslo, its cohort actually carries 453 of its own variants against Oslo's 257, because the variants dealt to Lagos are the ones common in African-ancestry people.
 
 The test set is 2,373 rows: 1,596 `random` and 777 from the six unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3 and TNNT2. 183 of them are population-discordant and every one of those is benign, which is why that subset is scored with a false-alarm rate and not an AUC. 1,525 of the 6,417 training variants are held by more than one hospital.
+
+**Step 3 is built.** It trains the single-site and pooled baselines with
+**logistic regression** and scores them on the locked test set under the four
+frequency-evidence settings, writing `data/results_local.json`. The method, every
+table and the interpretation are in [docs/step3_results.md](docs/step3_results.md).
+
+Two results decide how step 4 should be presented:
+
+- **AUC is saturated and flat**, 0.97 to 0.98 in every cell. Training on 1,817
+  Karachi rows scores what training on all 6,417 does. Federation has no accuracy
+  to add, and a flat table is the honest outcome, not a failed experiment.
+- **Frequency changes the decision, not the ranking.** Dropping the frequency
+  feature costs 0.007 AUC and triples false alarms on the population-discordant
+  rows, 15 against 2 of 183. Federated counts match the gnomAD ceiling exactly,
+  and a hospital asking only its own patients does worse than today's public
+  reference, because its cohort is a third the size of gnomAD's European set.
+
+Sensitivity on the 1,152 pathogenic test rows stays at 0.92 throughout, so none
+of that is bought by missing disease-causing variants.
 
 To look at what you built:
 
