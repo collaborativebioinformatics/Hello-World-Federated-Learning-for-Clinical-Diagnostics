@@ -52,7 +52,7 @@ We tested the idea on three simulated hospitals, each serving a different popula
 
 ## How it works
 
-![Seven steps: three public sources join into one table, a test set is locked away, three hospitals train locally, a server averages the models, the result is scored, a patient's variant is sent to every hospital as a count query, and the answer becomes a verdict](docs/pipeline_flowchart.png?v=5)
+![The pipeline as built: two open APIs deliver three public sources as one table, a seeded random split locks a test set and deals the rest to three hospitals, each fits a logistic regression, an NVFlare server averages them, the locked set scores the result, and a patient query returns counts that two fixed rules read](docs/pipeline_flowchart_built.png?v=1)
 
 - **The data are real and public.** Expert verdicts come from ClinVar, computer predictions of damage from dbNSFP, and frequencies per population from gnomAD. The table holds 8,790 variants in 97 heart disease genes used by NHS labs.
 - **A test set is locked away first.** 2,373 variants are never used for training, including every variant of six whole genes.

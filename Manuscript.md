@@ -38,9 +38,9 @@ Montalvo et al. recently trained pathogenicity classifiers across ClinVar submit
 
 The design has seven steps (Figure 1). Steps 0 to 4 and step 6 are built and tested, and steps 5 and 7 are planned. All code is Python 3.12 with numpy and pandas, and every table and result is rebuilt from public sources by the commands listed under Data and code availability.
 
-![Figure 1](docs/pipeline_flowchart.png)
+![Figure 1](docs/pipeline_flowchart_built.png)
 
-**Figure 1.** Design of the prototype in seven steps. Steps 0 to 4 and step 6 are built and tested. Box 5 shows the evaluation as first planned, which sections 2.6 and 3 replace with a comparison of frequency sources, and step 7 is planned.
+**Figure 1.** The prototype as built. Two open interfaces deliver the gene list and the three public sources as one table. A seeded random split locks the test set and distributes the remaining variants over three simulated hospitals, drawn to scale in step 2. Each hospital fits a logistic regression, of which three of the 14 coefficients are shown, and NVIDIA FLARE averages them over 20 rounds. Step 5 gives the AUC by training arm and the false positives by source of frequency evidence. Steps 6 and 7 show the count query and the rule-based reading for two variants. Blue marks the label and amber marks frequency. Patient counts are simulated and all other values are real.
 
 ### 2.2 Gene panel and variant table
 
