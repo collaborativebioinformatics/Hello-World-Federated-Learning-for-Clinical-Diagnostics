@@ -288,7 +288,7 @@ Rows are training setups, columns are what the model is allowed to know. Every c
 | Oslo only | 0.976 | 0.978 | 7 → 2 |
 | Karachi only | 0.976 | 0.978 | 7 → 2 |
 | Lagos only | 0.975 | 0.978 | 8 → 2 |
-| Federated, FedAvg | step 4 | step 4 | step 4 |
+| **Federated, FedAvg** | **0.976** | **0.978** | **7 → 2** |
 | Pooled | 0.976 | 0.978 | 7 → 2 |
 
 Step 3 filled every row but the federated one, with **logistic regression**: 12
@@ -297,9 +297,28 @@ intercept. Full method and numbers in [docs/step3_results.md](docs/step3_results
 
 ![Two panels over the same five evidence settings. AUC is flat between 0.971 and 0.981; false alarms on the 183 discordant benign variants fall from 15 with no frequency to 7 with the public reference, 11 with the own hospital alone, and 2 with federated counts, equalling the gnomAD oracle](docs/step3_figure.png?v=1)
 
-> **No NVFlare yet.** Every model above was trained locally. The "federated"
-> column is the step 6 **count query** — each hospital returning carrier counts at
-> scoring time — not FedAvg. Federated *training* is step 4 and is not built.
+> Two different federations are in play and the columns name both. The AUC
+> columns say which **frequency evidence** the model was given at scoring time
+> (the step 6 count query). The *rows* say how it was **trained**: the federated
+> row is real NVFlare FedAvg, added in step 4.
+
+Step 4 ran it for real. Five runs, mean (standard deviation), NVFlare 2.9.0
+FedAvg, 20 aggregation rounds, scored on the locked test set:
+
+| | AUC, federated count query | false alarms / 183 discordant benign |
+|---|---|---|
+| Oslo only | 0.9781 (0.0002) | 2.2 (0.4) |
+| **Federated, NVFlare FedAvg** | **0.9783 (0.0001)** | **2.0 (0.0)** |
+| Everything pooled | 0.9784 (0.0001) | 2.0 (0.0) |
+
+![Three arms, two metrics, error bars over five runs. AUC 0.9781, 0.9783, 0.9784; false alarms 2.2 with standard deviation 0.4 for Oslo only and exactly 2.0 for federated and pooled in every run](docs/step4_figure.png?v=1)
+
+**Federated lands on pooled**, within a standard deviation on AUC and to the last
+digit on false alarms: nothing was lost by keeping the rows at home. Oslo alone is
+behind and is the only arm that **moves** between deals — a single hospital's
+result depends on which variants it happened to be dealt, and federating removes
+that dependence. Method, per-run numbers and limits in
+[docs/step4_results.md](docs/step4_results.md).
 
 Read that table twice. **The AUC column is flat** — training on 1,817 Karachi
 rows scores what training on all 6,417 does, to three decimals. A fourteen-weight
@@ -307,10 +326,11 @@ model on these scores saturates long before 1,800 rows, so federation has no
 accuracy to add and step 4 will not change these numbers. **The false-alarm
 column is where the result is.**
 
-The open question for step 4 is the federated row, and step 3 has already
-narrowed it: since every single-site model matches pooled on AUC, the thing to
-check is not whether FedAvg wins but whether it loses anything, and whether
-averaging washes out the frequency coefficient that does the real work.
+Both questions step 3 left for step 4 are answered. FedAvg loses nothing against
+pooling, and averaging does **not** wash out the frequency coefficient: the
+federated model carries −3.57 on log frequency against pooled's −3.73, so the
+veto survives. No personalisation step was needed, which is why the
+"federated, then tuned locally" row was never run.
 
 Read "per population" as the frequency evidence the model is given, not as three slices of test rows. Splitting the test set by population leaves 12 pathogenic variants in the African slice and none at all in the two thirds of rows gnomAD never saw, so an AUC per slice would be noise. The comparison that carries the result is the same rows scored under different frequency evidence: today's public reference, one hospital's own patients, the three hospitals' counts combined, and the gnomAD ceiling. [docs/data_contract.md](docs/data_contract.md) defines the four. The test set carries a `pop` column for the secondary read, and step 2 prints each slice's positive count so nobody quotes one by accident.
 
@@ -361,6 +381,8 @@ uv run python scripts/01_build_table.py             # step 1, about 4 minutes, t
 uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, the hospital files
 uv run python scripts/03_train_local.py            # step 3, a few seconds, the baselines
 uv run python scripts/plot_step3.py                # step 3 figure, from the results file
+uv run python scripts/04_federated_train.py        # step 4, about 6 minutes, NVFlare FedAvg x5
+uv run python scripts/plot_step4.py                # step 4 figure
 ```
 
 Two flags worth knowing:

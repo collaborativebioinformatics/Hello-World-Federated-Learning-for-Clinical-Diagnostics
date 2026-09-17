@@ -59,5 +59,5 @@ def render(name: str) -> None:
 
 
 if __name__ == "__main__":
-    for picture in ("recipe_status", "step3_figure"):
+    for picture in ("recipe_status", "step3_figure", "step4_figure"):
         render(picture)
