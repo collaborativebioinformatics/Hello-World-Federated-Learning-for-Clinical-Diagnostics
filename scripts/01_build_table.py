@@ -5,17 +5,24 @@ One API record per variant already holds the three things we need:
     dbNSFP   ->  computer prediction scores   (our features)
     gnomAD   ->  frequency per population
 
+The genes come from config/<panel>_gene_panel.txt, the list step 0 wrote for one
+disease area. `cardiac` is the default panel and its table sits at the top of
+data/. Any other panel gets a folder of its own, data/<panel>/, holding the same
+two files with the same columns.
+
 Writes into data/ (git-ignored):
     variants.csv    one row per variant, the readable columns first
     columns.json    which columns are features, frequencies and label
-    raw/GENE.json   cached downloads, so reruns are instant
+    raw/GENE.json   cached downloads, so reruns are instant. Shared by every panel
 
 Usage:
     uv run python scripts/01_build_table.py
+    uv run python scripts/01_build_table.py --panel cancer     # another disease area, into data/cancer/
     uv run python scripts/01_build_table.py --refresh          # download again
     uv run python scripts/01_build_table.py --genes MYH7,TTR   # quick test
 
 What every column means: docs/table_columns.md
+How to add a disease area: docs/disease_areas.md
 """
 
 from __future__ import annotations
@@ -33,9 +40,10 @@ import pandas as pd
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
-GENE_PANEL = ROOT / "config" / "cardiac_gene_panel.txt"
+CONFIG_DIR = ROOT / "config"
 DATA_DIR = ROOT / "data"
 CACHE_DIR = DATA_DIR / "raw"
+DEFAULT_PANEL = "cardiac"
 
 API_URL = "https://myvariant.info/v1/query"
 GENOME_BUILD = "hg38"
@@ -300,18 +308,38 @@ def read_gene_panel(path: Path) -> list[str]:
     return list(dict.fromkeys(line for line in lines if line))
 
 
+def gene_panel_file(panel: str) -> Path:
+    return CONFIG_DIR / f"{panel}_gene_panel.txt"
+
+
+def table_folder(panel: str) -> Path:
+    """The cardiac table keeps its place at the top of data/. Every other panel gets data/<panel>/."""
+    return DATA_DIR if panel == DEFAULT_PANEL else DATA_DIR / panel
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build data/variants.csv from myvariant.info")
+    parser = argparse.ArgumentParser(description="Build the variant table of one disease area from myvariant.info")
+    parser.add_argument("--panel", default=DEFAULT_PANEL, help="disease area: reads config/<panel>_gene_panel.txt (default: cardiac)")
     parser.add_argument("--refresh", action="store_true", help="ignore cached downloads")
     parser.add_argument("--genes", help="comma-separated genes instead of the whole panel")
-    parser.add_argument("--out", type=Path, default=DATA_DIR / "variants.csv", help="where to write the table")
+    parser.add_argument("--out", type=Path, help="where to write the table (default: data/variants.csv, or data/<panel>/variants.csv)")
     args = parser.parse_args()
+    out = args.out or table_folder(args.panel) / "variants.csv"
 
-    genes = args.genes.split(",") if args.genes else read_gene_panel(GENE_PANEL)
+    panel_file = gene_panel_file(args.panel)
+    if not args.genes and not panel_file.exists():
+        print(
+            f"{panel_file.relative_to(ROOT)} is missing. Run step 0 first, with the same panel:\n"
+            f"    uv run python scripts/00_fetch_gene_panel.py --panel {args.panel}",
+            file=sys.stderr,
+        )
+        return 1
+    genes = args.genes.split(",") if args.genes else read_gene_panel(panel_file)
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    out.parent.mkdir(parents=True, exist_ok=True)
 
     rows_by_id: dict[str, dict] = {}
     dropped = Counter()
@@ -342,14 +370,14 @@ def main() -> int:
 
     table = tidy(pd.DataFrame(rows_by_id.values()))
     try:
-        table.to_csv(args.out, index=False, lineterminator="\n")  # same bytes on Windows, Mac and Linux
+        table.to_csv(out, index=False, lineterminator="\n")  # same bytes on Windows, Mac and Linux
     except PermissionError:
-        print(f"\nCannot write {args.out}. It is open in another program, probably Excel. Close it and run again.", file=sys.stderr)
+        print(f"\nCannot write {out}. It is open in another program, probably Excel. Close it and run again.", file=sys.stderr)
         return 1
 
     print_summary(table, downloaded, dropped)
-    write_column_list(table, args.out.with_name("columns.json"))
-    print(f"wrote {args.out}  ({len(table)} rows x {table.shape[1]} columns)")
+    write_column_list(table, out.with_name("columns.json"))
+    print(f"wrote {out}  ({len(table)} rows x {table.shape[1]} columns)")
     if genes_with_nothing:
         print(
             f"\nWARNING: nothing found for {', '.join(genes_with_nothing)}. myvariant.info lists "

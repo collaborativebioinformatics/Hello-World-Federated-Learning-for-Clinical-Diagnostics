@@ -1,0 +1,67 @@
+# Inherited cancer gene panel: green (diagnostic-grade) genes from Genomics England PanelApp,
+# taken from the panels below, which are signed off by the NHS Genomic Medicine Service.
+# Written by scripts/00_fetch_gene_panel.py --panel cancer on 2026-09-17. Rerunning overwrites this file.
+#
+#    635  v3.2      8 green genes  Inherited breast cancer and ovarian cancer
+#    143  v5.2      9 green genes  Inherited ovarian cancer (without breast cancer)
+#    504  v4.2     17 green genes  Inherited polyposis and early onset colorectal cancer - germline testing
+#    503  v1.15     5 green genes  Inherited MMR deficiency (Lynch syndrome)
+#    524  v3.4      6 green genes  Inherited pancreatic cancer
+#   1223  v1.7      8 green genes  Inherited prostate cancer
+#    521  v1.30     6 green genes  Inherited renal cancer
+#    522  v2.15     4 green genes  Familial melanoma
+#    648  v3.8      7 green genes  Endocrine neoplasia
+#
+# 41 genes. Each gene line reads:  GENE  # panels that list it | how the gene is inherited
+# Inheritance is PanelApp's mode_of_inheritance, shortened to one word. A gene with more than one mode
+# keeps them all, separated by '; '.
+#   MONOALLELIC           one bad copy of the gene causes disease, also called dominant
+#   BIALLELIC             both copies must be bad, also called recessive. Healthy carriers exist
+#   BOTH                  PanelApp records both of the patterns above for this gene
+#   X-LINKED-MONOALLELIC  on the X chromosome. One bad copy in males, and one can be enough in females
+#   X-LINKED-BIALLELIC    on the X chromosome. One bad copy in males, two in females
+#   MITOCHONDRIAL         inherited through the mother's mitochondria
+#   UNKNOWN               PanelApp gives no clear mode
+# Cite: Martin AR et al., Nature Genetics 51, 1560-1565 (2019). https://panelapp.genomicsengland.co.uk
+
+AIP       # 648 | MONOALLELIC
+APC       # 504 | MONOALLELIC
+ATM       # 635, 524, 1223 | MONOALLELIC
+BAP1      # 521, 522 | MONOALLELIC
+BARD1     # 635 | MONOALLELIC
+BMPR1A    # 504 | MONOALLELIC
+BRCA1     # 635, 143, 524, 1223 | BOTH; MONOALLELIC
+BRCA2     # 635, 143, 524, 1223 | MONOALLELIC
+BRIP1     # 143 | MONOALLELIC
+CDC73     # 648 | MONOALLELIC
+CDK4      # 522 | MONOALLELIC
+CDKN1B    # 648 | MONOALLELIC
+CDKN2A    # 524, 522 | MONOALLELIC
+CHEK2     # 635, 1223 | MONOALLELIC
+EPCAM     # 504, 503 | MONOALLELIC
+FH        # 521 | MONOALLELIC
+FLCN      # 521 | MONOALLELIC
+GREM1     # 504 | MONOALLELIC
+MBD4      # 504 | BIALLELIC
+MEN1      # 648 | MONOALLELIC
+MET       # 521 | MONOALLELIC
+MLH1      # 143, 504, 503, 1223 | MONOALLELIC
+MSH2      # 143, 504, 503, 1223 | MONOALLELIC
+MSH6      # 143, 504, 503, 1223 | MONOALLELIC
+MUTYH     # 504 | BIALLELIC
+NTHL1     # 504 | BIALLELIC
+PALB2     # 635, 143, 524, 1223 | MONOALLELIC
+PMS2      # 504, 503 | MONOALLELIC
+POLD1     # 504 | MONOALLELIC
+POLE      # 504 | MONOALLELIC
+POT1      # 522 | MONOALLELIC
+PRKAR1A   # 648 | MONOALLELIC
+PTEN      # 504 | MONOALLELIC
+RAD51C    # 635, 143 | MONOALLELIC
+RAD51D    # 635, 143 | MONOALLELIC
+RET       # 648 | MONOALLELIC
+RNF43     # 504 | MONOALLELIC
+SDHB      # 521 | MONOALLELIC
+SMAD4     # 504 | MONOALLELIC
+STK11     # 504, 524 | MONOALLELIC
+VHL       # 521, 648 | MONOALLELIC

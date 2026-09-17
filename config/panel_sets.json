@@ -1,0 +1,27 @@
+{
+  "cardiac": {
+    "title": "Cardiac",
+    "panels": [
+      {"id": 49, "version": "6.4", "note": "Hypertrophic cardiomyopathy"},
+      {"id": 652, "version": "4.11", "note": "Dilated and arrhythmogenic cardiomyopathy"},
+      {"id": 842, "version": "14.33", "note": "Cardiac arrhythmias (long QT, Brugada, CPVT, conduction disease)"},
+      {"id": 700, "version": "5.8", "note": "Thoracic aortic aneurysm or dissection"},
+      {"id": 772, "version": "2.7", "note": "Familial hypercholesterolaemia"},
+      {"id": 502, "version": "1.31", "note": "Hereditary systemic amyloidosis (this is where TTR comes from)"}
+    ]
+  },
+  "cancer": {
+    "title": "Inherited cancer",
+    "panels": [
+      {"id": 635, "version": "3.2", "note": "Inherited breast cancer and ovarian cancer"},
+      {"id": 143, "version": "5.2", "note": "Inherited ovarian cancer (without breast cancer)"},
+      {"id": 504, "version": "4.2", "note": "Inherited polyposis and early onset colorectal cancer, germline testing"},
+      {"id": 503, "version": "1.15", "note": "Inherited MMR deficiency (Lynch syndrome)"},
+      {"id": 524, "version": "3.4", "note": "Inherited pancreatic cancer"},
+      {"id": 1223, "version": "1.7", "note": "Inherited prostate cancer"},
+      {"id": 521, "version": "1.30", "note": "Inherited renal cancer"},
+      {"id": 522, "version": "2.15", "note": "Familial melanoma"},
+      {"id": 648, "version": "3.8", "note": "Endocrine neoplasia"}
+    ]
+  }
+}

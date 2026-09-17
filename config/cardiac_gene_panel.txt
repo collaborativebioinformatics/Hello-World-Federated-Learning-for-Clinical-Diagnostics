@@ -1,6 +1,6 @@
 # Cardiac gene panel: green (diagnostic-grade) genes from Genomics England PanelApp,
-# taken from the heart-related panels signed off by the NHS Genomic Medicine Service.
-# Written by scripts/00_fetch_gene_panel.py on 2026-09-17. Rerunning overwrites this file.
+# taken from the panels below, which are signed off by the NHS Genomic Medicine Service.
+# Written by scripts/00_fetch_gene_panel.py --panel cardiac on 2026-09-17. Rerunning overwrites this file.
 #
 #     49  v6.4     24 green genes  Hypertrophic cardiomyopathy
 #    652  v4.11    35 green genes  Dilated and arrhythmogenic cardiomyopathy
@@ -9,110 +9,119 @@
 #    772  v2.7      5 green genes  Familial hypercholesterolaemia (GMS)
 #    502  v1.31     7 green genes  Hereditary systemic amyloidosis
 #
-# 104 genes. The numbers after each gene are the panels that list it.
+# 104 genes. Each gene line reads:  GENE  # panels that list it | how the gene is inherited
+# Inheritance is PanelApp's mode_of_inheritance, shortened to one word. A gene with more than one mode
+# keeps them all, separated by '; '.
+#   MONOALLELIC           one bad copy of the gene causes disease, also called dominant
+#   BIALLELIC             both copies must be bad, also called recessive. Healthy carriers exist
+#   BOTH                  PanelApp records both of the patterns above for this gene
+#   X-LINKED-MONOALLELIC  on the X chromosome. One bad copy in males, and one can be enough in females
+#   X-LINKED-BIALLELIC    on the X chromosome. One bad copy in males, two in females
+#   MITOCHONDRIAL         inherited through the mother's mitochondria
+#   UNKNOWN               PanelApp gives no clear mode
 # Cite: Martin AR et al., Nature Genetics 51, 1560-1565 (2019). https://panelapp.genomicsengland.co.uk
 
-ABL1      # 700
-ACTA2     # 700
-ACTC1     # 49, 652
-ACTN2     # 49, 652
-ALPK3     # 49
-APOA1     # 502
-APOA2     # 502
-APOB      # 772
-APOC2     # 502
-APOE      # 772
-ASPH      # 700
-BAG3      # 652
-BGN       # 700
-CACNA1C   # 49, 842
-CALM1     # 842
-CALM2     # 842
-CALM3     # 842
-CASQ2     # 842
-CBS       # 700
-CDH2      # 652
-COL1A1    # 700
-COL3A1    # 700
-COL5A1    # 700
-COL5A2    # 700
-CSRP3     # 49
-DES       # 652
-DMD       # 652
-DOLK      # 652
-DSC2      # 652
-DSG2      # 652
-DSP       # 652
-EFEMP2    # 700
-ELN       # 700
-EMD       # 652
-FBLN5     # 700
-FBN1      # 700
-FBN2      # 700
-FGA       # 502
-FHL1      # 49
-FHOD3     # 49
-FKBP14    # 700
-FLNA      # 700
-FLNC      # 49, 652
-GLA       # 49
-GNB5      # 842
-GSN       # 502
-IPO8      # 700
-JUP       # 652
-KCNE1     # 842
-KCNH2     # 842
-KCNJ2     # 842
-KCNQ1     # 842
-KLHL24    # 49
-LAMP2     # 49, 652
-LDLR      # 772
-LDLRAP1   # 772
-LMNA      # 652
-LOX       # 700
-LYZ       # 502
-MFAP5     # 700
-MYBPC3    # 49, 652
-MYH11     # 700
-MYH7      # 49, 652
-MYL2      # 49
-MYL3      # 49
-MYLK      # 700
-NEXN      # 652
-NKX2-5    # 652
-NOTCH1    # 700
-PCSK9     # 772
-PKP2      # 652
-PLN       # 49, 652
-PLOD1     # 700
-PMEPA1    # 700
-PPA2      # 652
-PRDM16    # 652
-PRKAG2    # 49
-PRKG1     # 700
-RBM20     # 652
-RYR2      # 652, 842
-SCN5A     # 652, 842
-SECISBP2  # 700
-SKI       # 700
-SLC2A10   # 700
-SMAD2     # 700
-SMAD3     # 700
-SMAD4     # 700
-TBX20     # 49, 652
-TECRL     # 842
-TGFB2     # 700
-TGFB3     # 700
-TGFBR1    # 700
-TGFBR2    # 700
-TMEM43    # 652
-TNNC1     # 49, 652
-TNNI3     # 49, 652
-TNNI3K    # 652
-TNNT2     # 49, 652
-TPM1      # 49, 652
-TRDN      # 842
-TRIM63    # 49
-TTN       # 652
-TTR       # 49, 502
-VCL       # 652
+ABL1      # 700 | MONOALLELIC
+ACTA2     # 700 | MONOALLELIC
+ACTC1     # 49, 652 | MONOALLELIC
+ACTN2     # 49, 652 | MONOALLELIC
+ALPK3     # 49 | BOTH
+APOA1     # 502 | MONOALLELIC
+APOA2     # 502 | MONOALLELIC
+APOB      # 772 | MONOALLELIC
+APOC2     # 502 | MONOALLELIC
+APOE      # 772 | BOTH
+ASPH      # 700 | BIALLELIC
+BAG3      # 652 | MONOALLELIC
+BGN       # 700 | X-LINKED-MONOALLELIC
+CACNA1C   # 49, 842 | MONOALLELIC
+CALM1     # 842 | MONOALLELIC
+CALM2     # 842 | MONOALLELIC
+CALM3     # 842 | MONOALLELIC
+CASQ2     # 842 | BIALLELIC
+CBS       # 700 | BIALLELIC
+CDH2      # 652 | MONOALLELIC
+COL1A1    # 700 | MONOALLELIC
+COL3A1    # 700 | BOTH
+COL5A1    # 700 | MONOALLELIC
+COL5A2    # 700 | MONOALLELIC
+CSRP3     # 49 | MONOALLELIC
+DES       # 652 | BOTH
+DMD       # 652 | X-LINKED-MONOALLELIC
+DOLK      # 652 | BIALLELIC
+DSC2      # 652 | BOTH
+DSG2      # 652 | MONOALLELIC
+DSP       # 652 | BOTH
+EFEMP2    # 700 | BIALLELIC
+ELN       # 700 | MONOALLELIC
+EMD       # 652 | X-LINKED-BIALLELIC
+FBLN5     # 700 | BOTH
+FBN1      # 700 | MONOALLELIC
+FBN2      # 700 | MONOALLELIC
+FGA       # 502 | MONOALLELIC
+FHL1      # 49 | X-LINKED-BIALLELIC
+FHOD3     # 49 | MONOALLELIC
+FKBP14    # 700 | BIALLELIC
+FLNA      # 700 | X-LINKED-MONOALLELIC
+FLNC      # 49, 652 | MONOALLELIC
+GLA       # 49 | X-LINKED-MONOALLELIC
+GNB5      # 842 | BIALLELIC
+GSN       # 502 | BOTH
+IPO8      # 700 | BIALLELIC
+JUP       # 652 | BOTH
+KCNE1     # 842 | BOTH
+KCNH2     # 842 | MONOALLELIC
+KCNJ2     # 842 | MONOALLELIC
+KCNQ1     # 842 | BOTH; MONOALLELIC
+KLHL24    # 49 | BIALLELIC
+LAMP2     # 49, 652 | X-LINKED-MONOALLELIC
+LDLR      # 772 | MONOALLELIC
+LDLRAP1   # 772 | BIALLELIC
+LMNA      # 652 | MONOALLELIC
+LOX       # 700 | MONOALLELIC
+LYZ       # 502 | MONOALLELIC
+MFAP5     # 700 | MONOALLELIC
+MYBPC3    # 49, 652 | BOTH; MONOALLELIC
+MYH11     # 700 | MONOALLELIC
+MYH7      # 49, 652 | MONOALLELIC
+MYL2      # 49 | MONOALLELIC
+MYL3      # 49 | BOTH
+MYLK      # 700 | MONOALLELIC
+NEXN      # 652 | MONOALLELIC
+NKX2-5    # 652 | MONOALLELIC
+NOTCH1    # 700 | MONOALLELIC
+PCSK9     # 772 | MONOALLELIC
+PKP2      # 652 | MONOALLELIC
+PLN       # 49, 652 | MONOALLELIC
+PLOD1     # 700 | BIALLELIC
+PMEPA1    # 700 | MONOALLELIC
+PPA2      # 652 | BIALLELIC
+PRDM16    # 652 | MONOALLELIC
+PRKAG2    # 49 | MONOALLELIC
+PRKG1     # 700 | MONOALLELIC
+RBM20     # 652 | MONOALLELIC
+RYR2      # 652, 842 | MONOALLELIC
+SCN5A     # 652, 842 | MONOALLELIC
+SECISBP2  # 700 | BIALLELIC
+SKI       # 700 | MONOALLELIC
+SLC2A10   # 700 | BIALLELIC
+SMAD2     # 700 | MONOALLELIC
+SMAD3     # 700 | MONOALLELIC
+SMAD4     # 700 | MONOALLELIC
+TBX20     # 49, 652 | MONOALLELIC
+TECRL     # 842 | BIALLELIC
+TGFB2     # 700 | MONOALLELIC
+TGFB3     # 700 | MONOALLELIC
+TGFBR1    # 700 | MONOALLELIC
+TGFBR2    # 700 | MONOALLELIC
+TMEM43    # 652 | MONOALLELIC
+TNNC1     # 49, 652 | MONOALLELIC
+TNNI3     # 49, 652 | BOTH
+TNNI3K    # 652 | MONOALLELIC
+TNNT2     # 49, 652 | MONOALLELIC
+TPM1      # 49, 652 | MONOALLELIC
+TRDN      # 842 | BIALLELIC
+TRIM63    # 49 | BIALLELIC
+TTN       # 652 | MONOALLELIC
+TTR       # 49, 502 | MONOALLELIC
+VCL       # 652 | MONOALLELIC

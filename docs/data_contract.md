@@ -116,3 +116,23 @@ Seed 12, `SITE_OVERLAP` 0.5. Settings sit at the top of `scripts/02_simulate_hos
 Test set: 2,373 rows. 1,596 random, 777 from the unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3, TNNT2. 1,525 of the 6,417 training variants are held by more than one hospital.
 
 Patient settings are illustrative, not estimates: 15% of each cohort are heart patients, a fifth of those are explained by one pathogenic variant, and pathogenic variants are five times more common among the affected.
+
+## A second disease area
+
+Everything above describes the heart build, which keeps its place at the top of `data/`. Any other disease area lives in a folder of its own, `data/<panel>/`, with the same file names and the same 40 table columns in the same order. The inherited cancer build is in `data/cancer/`. Build it with:
+
+```
+uv run python scripts/00_fetch_gene_panel.py --panel cancer
+uv run python scripts/01_build_table.py --panel cancer
+```
+
+Step 0 writes `config/cancer_gene_panel.txt`. Step 1 writes `data/cancer/variants.csv` and `data/cancer/columns.json`. The download cache `data/raw/` is shared by every panel, because the query for a gene is the same whichever panel asks for it. With no `--panel`, both steps behave exactly as before and the heart files keep the same bytes.
+
+Two things change from one disease area to the next. Both are recorded in files, so a script should read them from there.
+
+- The `features` list in `columns.json` is decided per table by the 30% missing rule. The heart table recommends 13 score columns and the cancer table recommends 16. The 13 heart columns are all among the 16.
+- The demo variants. `DSP N1526K` is a heart variant and is absent from the cancer table. Candidates for cancer are listed in [disease_areas.md](disease_areas.md).
+
+**What a script needs to read it.** Today steps 2, 3 and 4 and the step 6 query each have their own line `DATA_DIR = ROOT / "data"`, and every path they read or write hangs off that line. A suggestion for the ML side, which has not been made: give each script a `--panel` flag with default `cardiac`, and set `DATA_DIR` to `ROOT / "data"` for `cardiac` and to `ROOT / "data" / panel` for anything else. That is the rule `table_folder()` follows in `scripts/01_build_table.py`. Step 2 would also need one reference file per panel, for example `config/reference_build_<panel>.json`, because `config/reference_build.json` holds the heart fingerprints.
+
+As a trial, steps 2 and 3 were loaded unchanged from a throwaway script with only `DATA_DIR` pointed at `data/cancer/`. Both ran to the end and every self-check in step 2 passed. The numbers are in [disease_areas.md](disease_areas.md).
