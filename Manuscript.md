@@ -3,16 +3,16 @@
 
 # Hello World! Federated Learning for Clinical Diagnostics: population-aware variant classification across three simulated hospitals
 
-Yan Li<sup>1</sup>, Mohit Panwar<sup>2</sup>, Shreya Srivastava<sup>3</sup>, Oumaima Boussouis<sup>4</sup>
+Yan Li<sup>1</sup>, Mohit B. Panwar<sup>2</sup>, Shreya Srivastava<sup>3</sup>, Oumaima Boussouis<sup>4</sup>
 
 <sup>1</sup> Department of Public Health, University of Copenhagen, Denmark<br>
 <sup>2</sup> Department of Clinical Neuroscience, Institute of Neuroscience and Physiology, Sahlgrenska Academy, University of Gothenburg, Gothenburg, Sweden<br>
 <sup>3</sup> Department of Computational and Data Sciences, Indian Institute of Science, Bengaluru, India<br>
 <sup>4</sup> ENSIAS, Mohammed V University in Rabat, Morocco
 
-ORCID: Yan Li [0009-0004-6076-1570](https://orcid.org/0009-0004-6076-1570); Mohit Panwar [0009-0002-8866-8170](https://orcid.org/0009-0002-8866-8170); Oumaima Boussouis [0009-0005-6498-3805](https://orcid.org/0009-0005-6498-3805)
+ORCID: Yan Li [0009-0004-6076-1570](https://orcid.org/0009-0004-6076-1570); Mohit B. Panwar [0009-0002-8866-8170](https://orcid.org/0009-0002-8866-8170); Oumaima Boussouis [0009-0005-6498-3805](https://orcid.org/0009-0005-6498-3805)
 
-Correspondence: Mohit Panwar, mohit.panwar@gu.se
+Correspondence: Mohit B. Panwar, mohit.panwar@gu.se
 
 ## Abstract
 
