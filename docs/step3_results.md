@@ -1,5 +1,9 @@
 # Step 3 results: single-site and pooled baselines
 
+> **No NVFlare here.** Every model on this page was trained locally. "Federated
+> query" is the step 6 count query, each hospital returning carrier counts at
+> scoring time; federated *training* with FedAvg is step 4 and is not built yet.
+
 The model is **logistic regression**:
 
 ```
@@ -18,6 +22,12 @@ mean over three of them, and "only weights travel" is literally 14 numbers.
 
 Reproduce with `uv run python scripts/03_train_local.py`. Every number below is
 also in `data/results_local.json`.
+
+![Two panels over the same five evidence settings. AUC is flat between 0.971 and 0.981; false alarms on the 183 discordant benign variants fall from 15 with no frequency to 7 with the public reference, 11 with the own hospital alone, and 2 with federated counts, equalling the gnomAD oracle](step3_figure.png?v=1)
+
+Source: [step3_figure.html](step3_figure.html), generated from `data/results_local.json`
+by `scripts/plot_step3.py`, so the picture cannot drift from the run. Re-render it
+with `scripts/render_docs_png.py`.
 
 ## Setup
 
@@ -74,7 +84,7 @@ in a patient whose ancestry it rarely sees.
 
 AUC, all 2,373 test rows:
 
-| trained on | public | own hospital | federated | ceiling |
+| trained on | public | own hospital | federated query | oracle |
 |---|---|---|---|---|
 | `site_oslo` | 0.976 | 0.975 | 0.978 | 0.980 |
 | `site_karachi` | 0.976 | 0.975 | 0.978 | 0.980 |
@@ -83,7 +93,7 @@ AUC, all 2,373 test rows:
 
 AUC, the 777 rows from genes no hospital has seen, which is the honest number:
 
-| trained on | public | own hospital | federated | ceiling |
+| trained on | public | own hospital | federated query | oracle |
 |---|---|---|---|---|
 | `site_oslo` | 0.971 | 0.969 | 0.974 | 0.976 |
 | `site_karachi` | 0.969 | 0.968 | 0.973 | 0.975 |
@@ -112,8 +122,8 @@ Test and training share no variant, verified in step 2.
 |---|---|---|---|
 | public | 7 / 183 | 0.038 | 0.019 to 0.077 |
 | own hospital | 11 / 183 | 0.060 | 0.034 to 0.104 |
-| federated | 2 / 183 | 0.011 | 0.003 to 0.039 |
-| ceiling | 2 / 183 | 0.011 | 0.003 to 0.039 |
+| federated query | 2 / 183 | 0.011 | 0.003 to 0.039 |
+| oracle | 2 / 183 | 0.011 | 0.003 to 0.039 |
 
 Those intervals overlap. Quoting "a threefold drop in false alarms" from them
 alone would not survive a referee. The settings are scored on the **same**
@@ -121,10 +131,10 @@ variants, so the paired comparison is the one that carries weight:
 
 | subset | comparison | removed | introduced | exact p |
 |---|---|---|---|---|
-| discordant benign | public → federated | 5 | 0 | 0.063 |
-| discordant benign | own hospital → federated | 9 | 0 | 0.004 |
-| all benign (1,221) | public → federated | 20 | 8 | 0.036 |
-| all benign (1,221) | own hospital → federated | 21 | 0 | <0.001 |
+| discordant benign | public → federated query | 5 | 0 | 0.063 |
+| discordant benign | own hospital → federated query | 9 | 0 | 0.004 |
+| all benign (1,221) | public → federated query | 20 | 8 | 0.036 |
+| all benign (1,221) | own hospital → federated query | 21 | 0 | <0.001 |
 
 Honest reading: against **today's public reference**, federation removes false
 alarms and introduces none on the pre-registered discordant subset, but at 5
@@ -147,7 +157,7 @@ combining, not from localness.
 
 Sensitivity on all 1,152 pathogenic test rows, at the same thresholds:
 
-| trained on | public | own hospital | federated | ceiling |
+| trained on | public | own hospital | federated query | oracle |
 |---|---|---|---|---|
 | pooled | 0.919 | 0.921 | 0.919 | 0.917 |
 
@@ -187,7 +197,7 @@ SHAP plot and an argument.
 Reported because README section 5 asks for it, with the positive counts that say
 what it is worth.
 
-| population | rows | pathogenic | public | own hospital | federated | ceiling |
+| population | rows | pathogenic | public | own hospital | federated query | oracle |
 |---|---|---|---|---|---|---|
 | afr | 241 | 12 | 0.950 | 0.948 | 0.952 | 0.963 |
 | nfe | 382 | 58 | 0.935 | 0.934 | 0.934 | 0.935 |

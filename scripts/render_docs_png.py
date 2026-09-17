@@ -4,9 +4,13 @@ The pictures are normally made with the Chrome command written at the top of
 each HTML file, and that stays the way to do it. On machines where Chrome
 crashes, such as a Cray login node, this gives the same PNG through WeasyPrint.
 
-Only recipe_status is rendered this way. pipeline_flowchart draws its
+recipe_status and step3_figure render this way. pipeline_flowchart draws its
 connectors as SVG strokes with arrow markers, and WeasyPrint fills them in as
 solid black bars, so that one still needs Chrome.
+
+One WeasyPrint trap worth knowing when editing those pages: text-anchor is
+honoured as an SVG attribute but ignored as a CSS property, and a chart whose
+labels rely on the CSS form silently stacks every label on top of its bars.
 
 Two things have to be patched for WeasyPrint, and they are patched here rather
 than in the HTML so the Chrome command keeps working unchanged:
@@ -55,4 +59,5 @@ def render(name: str) -> None:
 
 
 if __name__ == "__main__":
-    render("recipe_status")
+    for picture in ("recipe_status", "step3_figure"):
+        render(picture)

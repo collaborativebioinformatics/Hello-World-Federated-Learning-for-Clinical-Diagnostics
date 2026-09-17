@@ -283,7 +283,7 @@ Fallback: Flower, if the NVFlare simulator fights us for more than two hours on 
 
 Rows are training setups, columns are what the model is allowed to know. Every cell is scored per population on the held-out set.
 
-| training setup | test AUC, public frequency | test AUC, federated frequency | false alarms on the 183 discordant benign rows |
+| training setup | test AUC, public frequency | test AUC, federated counts | false alarms on the 183 discordant benign rows |
 |---|---|---|---|
 | Oslo only | 0.976 | 0.978 | 7 → 2 |
 | Karachi only | 0.976 | 0.978 | 7 → 2 |
@@ -294,6 +294,12 @@ Rows are training setups, columns are what the model is allowed to know. Every c
 Step 3 filled every row but the federated one, with **logistic regression**: 12
 prediction scores plus one log frequency, fourteen weights including the
 intercept. Full method and numbers in [docs/step3_results.md](docs/step3_results.md).
+
+![Two panels over the same five evidence settings. AUC is flat between 0.971 and 0.981; false alarms on the 183 discordant benign variants fall from 15 with no frequency to 7 with the public reference, 11 with the own hospital alone, and 2 with federated counts, equalling the gnomAD oracle](docs/step3_figure.png?v=1)
+
+> **No NVFlare yet.** Every model above was trained locally. The "federated"
+> column is the step 6 **count query** — each hospital returning carrier counts at
+> scoring time — not FedAvg. Federated *training* is step 4 and is not built.
 
 Read that table twice. **The AUC column is flat** — training on 1,817 Karachi
 rows scores what training on all 6,417 does, to three decimals. A fourteen-weight
@@ -354,6 +360,7 @@ uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from
 uv run python scripts/01_build_table.py             # step 1, about 4 minutes, then cached
 uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, the hospital files
 uv run python scripts/03_train_local.py            # step 3, a few seconds, the baselines
+uv run python scripts/plot_step3.py                # step 3 figure, from the results file
 ```
 
 Two flags worth knowing:
@@ -439,10 +446,11 @@ Two results decide how step 4 should be presented:
   Karachi rows scores what training on all 6,417 does. Federation has no accuracy
   to add, and a flat table is the honest outcome, not a failed experiment.
 - **Frequency changes the decision, not the ranking.** Dropping the frequency
-  feature costs 0.007 AUC and triples false alarms on the population-discordant
-  rows, 15 against 2 of 183. Federated counts match the gnomAD ceiling exactly,
-  and a hospital asking only its own patients does worse than today's public
-  reference, because its cohort is a third the size of gnomAD's European set.
+  feature costs 0.007 AUC and multiplies false alarms on the population-discordant
+  rows sevenfold, 15 against 2 of 183. Federated counts match the gnomAD oracle
+  exactly, and a hospital asking only its own patients does worse than today's
+  public reference, because its cohort is a third the size of gnomAD's European
+  set. [docs/step3_figure.png](docs/step3_figure.png) is the picture of this.
 
 Sensitivity on the 1,152 pathogenic test rows stays at 0.92 throughout, so none
 of that is bought by missing disease-causing variants.

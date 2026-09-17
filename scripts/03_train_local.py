@@ -179,7 +179,7 @@ def evidence_columns(test: pd.DataFrame) -> dict[str, np.ndarray]:
         # population cannot be the cause of a rare severe disease, so the veto
         # should fire on the highest count anyone reports, not on an average
         # that 20,000 Europeans would dominate.
-        "federated": np.max(np.stack(list(local.values())), axis=0),
+        "federated_query": np.max(np.stack(list(local.values())), axis=0),
         # gnomAD's real per-population frequencies. Not allowed in real life.
         "ceiling": test[[f"af_{p}" for p in ("nfe", "sas", "afr")]].max(axis=1).to_numpy(),
     }
@@ -209,7 +209,7 @@ def main() -> int:
           f"= {len(score_columns) + 2} weights including the intercept\n")
 
     models, results = {}, {"features": score_columns + ["log_frequency"], "training": {}, "evidence": {}}
-    print(f"{'trained on':<14} {'rows':>6} {'pathogenic':>11} {'train AUC':>10} {'cut':>7}")
+    print(f"{'trained on':<16} {'rows':>6} {'pathogenic':>11} {'train AUC':>10} {'cut':>7}")
     for name, rows in hospitals.items():
         X = features(rows, score_columns, rows.af_local.to_numpy())
         y = rows.label.to_numpy()
@@ -246,7 +246,7 @@ def main() -> int:
         ("sensitivity on every pathogenic test row", np.ones(len(test), bool), "sensitivity"),
     ]:
         print(f"\n{title}")
-        print(f"  {'trained on':<14}" + "".join(f"{k:>14}" for k in evidence))
+        print(f"  {'trained on':<16}" + "".join(f"{k:>17}" for k in evidence))
         for name, (weights, cut) in models.items():
             cells = []
             for source in evidence.values():
@@ -260,7 +260,7 @@ def main() -> int:
                     value = float((probability[label == 1] >= cut).mean())
                 cells.append(value)
             results["evidence"].setdefault(metric if metric != "auc" else title, {})[name] = dict(zip(evidence, cells))
-            print(f"  {name:<14}" + "".join(f"{c:>14.3f}" for c in cells))
+            print(f"  {name:<16}" + "".join(f"{c:>17.3f}" for c in cells))
 
     # ---- the headline, counted rather than rated, and tested pairwise ----
     # 183 rows turns every rate into single digits, so print what those digits
@@ -272,11 +272,11 @@ def main() -> int:
     }
     benign_discordant = discordant & (label == 0)
     print(f"\nthe headline, on the {int(benign_discordant.sum())} discordant benign rows, pooled model:")
-    print(f"  {'evidence':<14}{'false alarms':>14}{'rate':>8}{'95% interval':>18}")
+    print(f"  {'evidence':<16}{'false alarms':>14}{'rate':>8}{'95% interval':>18}")
     for source_name, fired in alarms.items():
         hits = int(fired[benign_discordant].sum())
         low, high = wilson_interval(hits, int(benign_discordant.sum()))
-        print(f"  {source_name:<14}{hits:>8} / {int(benign_discordant.sum()):<3}{hits / benign_discordant.sum():>8.3f}"
+        print(f"  {source_name:<16}{hits:>8} / {int(benign_discordant.sum()):<3}{hits / benign_discordant.sum():>8.3f}"
               f"{f'{low:.3f} to {high:.3f}':>18}")
 
     print("\n  Those intervals overlap, so the rates alone settle nothing. The settings are")
@@ -284,10 +284,10 @@ def main() -> int:
     results["paired"] = {}
     for where, mask in [("discordant benign", benign_discordant), ("all benign", label == 0)]:
         for baseline in ("public", "own_hospital"):
-            fixed = int((alarms[baseline] & ~alarms["federated"] & mask).sum())
-            broken = int((~alarms[baseline] & alarms["federated"] & mask).sum())
+            fixed = int((alarms[baseline] & ~alarms["federated_query"] & mask).sum())
+            broken = int((~alarms[baseline] & alarms["federated_query"] & mask).sum())
             p = sign_test(fixed, broken)
-            print(f"  {where:<18} {baseline:<13} -> federated: {fixed:>3} removed, {broken:>2} introduced, "
+            print(f"  {where:<18} {baseline:<13} -> federated query: {fixed:>3} removed, {broken:>2} introduced, "
                   f"exact p = {p:.4f}")
             results["paired"][f"{where}|{baseline}"] = {"removed": fixed, "introduced": broken, "p": p}
 
@@ -307,7 +307,7 @@ def main() -> int:
     print(f"  {'12 scores, no frequency at all':<34}{roc_auc(label, probability):>8.3f}"
           f"{f'{hits} / {int(benign_discordant.sum())}':>26}")
     results["ablation"] = {"scores_only": {"auc": roc_auc(label, probability), "false_alarms": hits}}
-    for source_name in ("public", "federated"):
+    for source_name in ("public", "federated_query"):
         probability = predict(features(test, score_columns, evidence[source_name]), weights)
         hits = int((probability[benign_discordant] >= cut).sum())
         print(f"  {'12 scores + ' + source_name + ' frequency':<34}{roc_auc(label, probability):>8.3f}"
@@ -316,15 +316,22 @@ def main() -> int:
 
     # ---- per-population AUC, with the positive counts that make it unusable ----
     print("\nAUC by the population a variant is most common in, with positive counts:")
-    print(f"  {'population':<12}{'rows':>6}{'pathogenic':>12}" + "".join(f"{k:>14}" for k in evidence))
+    print(f"  {'population':<12}{'rows':>6}{'pathogenic':>12}" + "".join(f"{k:>17}" for k in evidence))
     for population, index in test.groupby("pop").groups.items():
         mask = test.index.isin(index)
         positives = int(label[mask].sum())
         cells = [roc_auc(label[mask], predict(features(test, score_columns, source), models["pooled"][0])[mask])
                  for source in evidence.values()]
         warning = "   <- too few positives" if 0 < positives < 30 else ""
-        print(f"  {population:<12}{mask.sum():>6}{positives:>12}" + "".join(f"{c:>14.3f}" for c in cells) + warning)
+        print(f"  {population:<12}{mask.sum():>6}{positives:>12}" + "".join(f"{c:>17.3f}" for c in cells) + warning)
 
+    results["test_rows"] = len(test)
+    results["pathogenic_test_rows"] = int(label.sum())
+    results["discordant_benign_rows"] = int(benign_discordant.sum())
+    results["false_alarm_counts"] = {
+        name: int(fired[benign_discordant].sum()) for name, fired in alarms.items()
+    }
+    results["false_alarm_counts"]["scores_only"] = results["ablation"]["scores_only"]["false_alarms"]
     (DATA_DIR / "results_local.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     print(f"\nwrote {(DATA_DIR / 'results_local.json').relative_to(ROOT)}")
     return 0
