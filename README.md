@@ -15,7 +15,7 @@ Team 12: federated variant classification with population context
 
 **Short answer to how:** every hospital holds the same kind of table (variant, prediction scores, frequency, expert label). Each trains a small classifier on its own rows. An NVFlare server averages the model weights and sends them back. Only weights travel during training, and only counts travel when a patient is queried. Rows never leave.
 
-> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. In the example tables, variant scores and frequencies are real values from our built table, and hospital patient counts are the ones step 2 simulates; model weights, AUCs and probabilities are illustrative.
+> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. In the example tables, variant scores and frequencies are real values from our built table, hospital patient counts are the ones step 2 simulates, and the model weights and AUCs are the ones steps 3 and 4 actually produced. Only the step 7 disease probabilities are still illustrative.
 
 ---
 
@@ -188,23 +188,35 @@ and an argument.
 
 The server collects the three weight lists, averages them (weighted by row count), and sends the average back. Each site trains again from the average. Repeat about 20 rounds.
 
+Three of the fourteen weights from the real run, `[AlphaMissense, CADD, log(AF)]`:
+
 ```
-[0.8, 2.1, −1.5] + [0.7, 2.3, −1.2] + [0.9, 1.9, −1.7]  →  average  →  [0.8, 2.1, −1.5]
+Oslo    [4.19, 2.59, −3.26]
+Karachi [4.17, 2.21, −3.80]   →  FedAvg  →  [4.10, 2.40, −3.57]
+Lagos   [3.30, 2.14, −4.09]
 ```
 
-The only thing that travels is this short list of numbers.
+The only thing that travels is this short list of numbers: fourteen floats and a
+row count, per site per round. Note the averaged frequency weight, −3.57. The
+worry was that averaging would wash out the veto that the two small hospitals
+lean on hardest; it does not.
 
 ### Step 5. Score the held-out test
 
-Report AUC separately for test variants that look like each population's patients, for three training setups.
+Score the three training setups on rows none of them ever saw. The result is in
+[section 5](#5-the-result): federated lands on pooled, and a single hospital is
+behind but mostly in **variance** rather than in level.
 
-| trained on | Oslo-like | Karachi-like | Lagos-like | |
-|---|---|---|---|---|
-| Oslo only | 0.90 | 0.78 | 0.75 | fails on other populations |
-| federated (step 4) | 0.91 | 0.88 | 0.87 | the result we present |
-| everything pooled | 0.92 | 0.89 | 0.88 | ceiling, not allowed in real life |
+We expected the single-site model to collapse on the populations it does not
+serve. It does not, and the reason is worth stating plainly: the prediction
+scores carry almost all the ranking signal and they are population-independent,
+so a model trained on any 1,800 of these rows ranks about as well as one trained
+on all of them. What *is* population-dependent is the frequency evidence at
+scoring time, and that changes the decision rather than the ranking, which is why
+this step reports false alarms next to AUC.
 
-Expected shape: federated lands near pooled without anyone sharing rows, and the gain concentrates on populations the single site does not serve.
+What step 5 still adds on top of that: the false-alarm rate broken down further,
+model quality against site size, and the cost of hiding small counts.
 
 ### Step 6. A patient arrives, ask every hospital for counts
 
@@ -279,60 +291,55 @@ Fallback: Flower, if the NVFlare simulator fights us for more than two hours on 
 
 ---
 
-## 5. The experiment grid
+## 5. The result
 
-Rows are training setups, columns are what the model is allowed to know. Every cell is scored per population on the held-out set.
+**NVFlare 2.9.0, FedAvg, 20 aggregation rounds, simulator mode.** A server and
+three clients as separate processes, each client reading only its own folder.
+Five runs; what changes between runs is which hospital classified which variant.
+Mean (standard deviation over runs), scored on the locked test set that no arm
+ever trained on.
 
-| training setup | test AUC, public frequency | test AUC, federated counts | false alarms on the 183 discordant benign rows |
+| | AUC, public frequency | AUC, federated count query | false alarms / 183 discordant benign |
 |---|---|---|---|
-| Oslo only | 0.976 | 0.978 | 7 → 2 |
-| Karachi only | 0.976 | 0.978 | 7 → 2 |
-| Lagos only | 0.975 | 0.978 | 8 → 2 |
-| **Federated, FedAvg** | **0.976** | **0.978** | **7 → 2** |
-| Pooled | 0.976 | 0.978 | 7 → 2 |
-
-Step 3 filled every row but the federated one, with **logistic regression**: 12
-prediction scores plus one log frequency, fourteen weights including the
-intercept. Full method and numbers in [docs/step3_results.md](docs/step3_results.md).
-
-![Two panels over the same five evidence settings. AUC is flat between 0.971 and 0.981; false alarms on the 183 discordant benign variants fall from 15 with no frequency to 7 with the public reference, 11 with the own hospital alone, and 2 with federated counts, equalling the gnomAD oracle](docs/step3_figure.png?v=1)
-
-> Two different federations are in play and the columns name both. The AUC
-> columns say which **frequency evidence** the model was given at scoring time
-> (the step 6 count query). The *rows* say how it was **trained**: the federated
-> row is real NVFlare FedAvg, added in step 4.
-
-Step 4 ran it for real. Five runs, mean (standard deviation), NVFlare 2.9.0
-FedAvg, 20 aggregation rounds, scored on the locked test set:
-
-| | AUC, federated count query | false alarms / 183 discordant benign |
-|---|---|---|
-| Oslo only | 0.9781 (0.0002) | 2.2 (0.4) |
-| **Federated, NVFlare FedAvg** | **0.9783 (0.0001)** | **2.0 (0.0)** |
-| Everything pooled | 0.9784 (0.0001) | 2.0 (0.0) |
+| Oslo only | 0.9758 (0.0002) | 0.9781 (0.0002) | 2.2 (0.4) |
+| **Federated, NVFlare FedAvg** | **0.9759 (0.0001)** | **0.9783 (0.0001)** | **2.0 (0.0)** |
+| Everything pooled | 0.9760 (0.0001) | 0.9784 (0.0001) | 2.0 (0.0) |
 
 ![Three arms, two metrics, error bars over five runs. AUC 0.9781, 0.9783, 0.9784; false alarms 2.2 with standard deviation 0.4 for Oslo only and exactly 2.0 for federated and pooled in every run](docs/step4_figure.png?v=1)
 
-**Federated lands on pooled**, within a standard deviation on AUC and to the last
-digit on false alarms: nothing was lost by keeping the rows at home. Oslo alone is
-behind and is the only arm that **moves** between deals — a single hospital's
-result depends on which variants it happened to be dealt, and federating removes
-that dependence. Method, per-run numbers and limits in
-[docs/step4_results.md](docs/step4_results.md).
+**Federated lands on pooled**, 0.0001 apart in AUC — the same size as the
+run-to-run standard deviation — and identical to the last digit on false alarms.
+Nothing was lost by keeping the rows at home. That is the claim federation should
+make: not that it wins, but that it costs nothing against the arm no privacy law
+allows.
 
-Read that table twice. **The AUC column is flat** — training on 1,817 Karachi
-rows scores what training on all 6,417 does, to three decimals. A fourteen-weight
-model on these scores saturates long before 1,800 rows, so federation has no
-accuracy to add and step 4 will not change these numbers. **The false-alarm
-column is where the result is.**
+**Oslo alone is behind, and it is the only arm that moves.** Its false alarms
+were 3, 2, 2, 2, 2 across the five deals against a flat 2, 2, 2, 2, 2 for both
+other arms. At single-digit counts the size of the gap is not the interesting
+part; the **zero variance** is. A single hospital's result depends on which
+variants it happened to be dealt, and federating removes that dependence.
 
-Both questions step 3 left for step 4 are answered. FedAvg loses nothing against
-pooling, and averaging does **not** wash out the frequency coefficient: the
-federated model carries −3.57 on log frequency against pooled's −3.73, so the
-veto survives. No personalisation step was needed, which is why the
-"federated, then tuned locally" row was never run.
+**Averaging does not wash out the frequency coefficient**, which was the open
+question: the federated model carries −3.57 on log frequency against pooled's
+−3.73. The veto survives, so no per-site personalisation step was needed.
 
-Read "per population" as the frequency evidence the model is given, not as three slices of test rows. Splitting the test set by population leaves 12 pathogenic variants in the African slice and none at all in the two thirds of rows gnomAD never saw, so an AUC per slice would be noise. The comparison that carries the result is the same rows scored under different frequency evidence: today's public reference, one hospital's own patients, the three hospitals' counts combined, and the gnomAD ceiling. [docs/data_contract.md](docs/data_contract.md) defines the four. The test set carries a `pop` column for the secondary read, and step 2 prints each slice's positive count so nobody quotes one by accident.
+The model is **logistic regression** — 12 prediction scores plus one log
+frequency, fourteen weights including the intercept. What crosses the wire is
+those fourteen floats and a row count, per site per round. The threshold is
+federated too: each site takes its 95%-sensitivity quantile on its own rows and
+the server averages them by row count, so no site ever sees another's data.
+
+Method, per-run numbers and limits: [docs/step4_results.md](docs/step4_results.md).
+The single-site and pooled baselines these are measured against were built in
+step 3, and their full analysis, including what the frequency evidence is worth
+and why AUC cannot see it, is in [docs/step3_results.md](docs/step3_results.md).
+
+> **One caveat to carry into any talk.** AUC was saturated before federation
+> started: a fourteen-weight model on these scores reaches 0.97 on 1,800 rows, so
+> no training method can separate itself here. Present the flat AUC column as
+> evidence that FedAvg **costs nothing**, not as evidence that it works well. The
+> metric that moves in this project is the false-alarm rate, and what moves it is
+> the step 6 count query rather than the weight averaging.
 
 ---
 
@@ -365,7 +372,7 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0 to 3 and step 6 are built and tested, step 4 is next](docs/recipe_status.png?v=6)
+![Recipe status: steps 0 to 4 and step 6 are built and tested, step 5 is next](docs/recipe_status.png?v=7)
 
 Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture. Where headless Chrome will not run, `uv run --with weasyprint --with pypdfium2 --with pillow python scripts/render_docs_png.py` produces the same picture; it does not work for the flowchart, whose arrows need Chrome.
 
@@ -457,25 +464,16 @@ Three things to read off that table. Oslo is the big lab and holds more than twi
 
 The test set is 2,373 rows: 1,596 `random` and 777 from the six unseen genes CACNA1C, COL5A2, DMD, MYBPC3, TNNI3 and TNNT2. 183 of them are population-discordant and every one of those is benign, which is why that subset is scored with a false-alarm rate and not an AUC. 1,525 of the 6,417 training variants are held by more than one hospital.
 
-**Step 3 is built.** It trains the single-site and pooled baselines with
-**logistic regression** and scores them on the locked test set under the four
-frequency-evidence settings, writing `data/results_local.json`. The method, every
-table and the interpretation are in [docs/step3_results.md](docs/step3_results.md).
+**Step 3 is built.** Logistic regression, the single-site and pooled baselines
+that step 4 is measured against, written to `data/results_local.json`. It also
+carries the separate question of what the frequency evidence is worth, which AUC
+cannot see: full analysis in [docs/step3_results.md](docs/step3_results.md).
 
-Two results decide how step 4 should be presented:
-
-- **AUC is saturated and flat**, 0.97 to 0.98 in every cell. Training on 1,817
-  Karachi rows scores what training on all 6,417 does. Federation has no accuracy
-  to add, and a flat table is the honest outcome, not a failed experiment.
-- **Frequency changes the decision, not the ranking.** Dropping the frequency
-  feature costs 0.007 AUC and multiplies false alarms on the population-discordant
-  rows sevenfold, 15 against 2 of 183. Federated counts match the gnomAD oracle
-  exactly, and a hospital asking only its own patients does worse than today's
-  public reference, because its cohort is a third the size of gnomAD's European
-  set. [docs/step3_figure.png](docs/step3_figure.png) is the picture of this.
-
-Sensitivity on the 1,152 pathogenic test rows stays at 0.92 throughout, so none
-of that is bought by missing disease-causing variants.
+**Step 4 is built.** NVFlare FedAvg over the three hospitals, five runs,
+`data/results_federated.json`. The numbers are in [section 5](#5-the-result);
+method and limits in [docs/step4_results.md](docs/step4_results.md). Sensitivity
+on the 1,152 pathogenic test rows holds at 0.92 throughout, so none of the
+false-alarm reduction is bought by missing disease-causing variants.
 
 To look at what you built:
 
