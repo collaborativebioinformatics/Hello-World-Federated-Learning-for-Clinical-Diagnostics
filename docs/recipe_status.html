@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!--
+  Recipe status picture.
+
+  TO UPDATE: each step below is one <div class="step ...">.
+    class="step done"   green  built and tested
+    class="step next"   amber  designed, being built
+    class="step todo"   grey   not started
+  Change that one word, edit the text lines, change the date, then re-render:
+
+  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,800 --screenshot=docs/recipe_status.png docs/recipe_status.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Team 12 recipe status</title>
+<style>
+  body{margin:0;background:#faf9f5;color:#2c2c2a;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:13px}
+  .page{width:680px;margin:0 auto;padding:24px 12px}
+  h1{font-size:18px;font-weight:500;margin:0 0 2px}
+  .date{font-size:12px;color:#5f5e5a;margin:0 0 12px}
+  .legend{display:flex;gap:16px;font-size:12px;color:#5f5e5a;margin:0 0 14px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .step{display:flex;gap:12px;border:1px solid;border-radius:8px;padding:9px 12px}
+  .num{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;color:#fff}
+  .body{flex:1}
+  .title{font-size:14px;font-weight:500;margin:0 0 3px}
+  .pill{float:right;font-size:11px;padding:1px 8px;border-radius:9px;border:1px solid}
+  .line{margin:0;font-size:12px;line-height:1.5}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+  .arrow{height:18px;display:flex;justify-content:center}
+  .arrow svg{display:block}
+
+  .done{background:#EAF3DE;border-color:#639922;color:#27500A}
+  .done .num{background:#3B6D11}.done .pill{border-color:#639922;background:#fff}
+  .next{background:#FAEEDA;border-color:#BA7517;color:#633806}
+  .next .num{background:#854F0B}.next .pill{border-color:#BA7517;background:#fff}
+  .todo{background:#F1EFE8;border-color:#B4B2A9;color:#5F5E5A}
+  .todo .num{background:#888780}.todo .pill{border-color:#B4B2A9;background:#fff}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>Recipe status</h1>
+<p class="date">Updated 17 September 2026 · green steps run from a fresh clone with the commands shown</p>
+<div class="legend">
+  <span><span class="dot" style="background:#3B6D11"></span>built and tested</span>
+  <span><span class="dot" style="background:#854F0B"></span>designed, being built</span>
+  <span><span class="dot" style="background:#888780"></span>not started</span>
+</div>
+
+<div class="step done"><div class="num">0</div><div class="body">
+  <span class="pill">done</span><p class="title">Gene list</p>
+  <p class="line">104 diagnostic-grade genes from six NHS-signed-off PanelApp heart panels, versions pinned</p>
+  <p class="line">makes <code>config/cardiac_gene_panel.txt</code> · run <code>uv run python scripts/00_fetch_gene_panel.py</code></p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step done"><div class="num">1</div><div class="body">
+  <span class="pill">done</span><p class="title">Variant table</p>
+  <p class="line">8,790 missense variants in 97 genes · 4,960 pathogenic, 3,830 benign · 13 score columns · 622 population-discordant</p>
+  <p class="line">makes <code>data/variants.csv</code>, <code>data/columns.json</code> · run <code>uv run python scripts/01_build_table.py</code></p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step next"><div class="num">2</div><div class="body">
+  <span class="pill">next</span><p class="title">Hospital files</p>
+  <p class="line">held-out test set locked first · three sites of unequal size · per site: private verdicts and simulated patient counts</p>
+  <p class="line">will make <code>data/test/</code>, <code>data/site_oslo/</code>, <code>data/site_karachi/</code>, <code>data/site_lagos/</code>, <code>data/public_reference.csv</code></p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step todo"><div class="num">3</div><div class="body">
+  <span class="pill">ML side</span><p class="title">Local training</p>
+  <p class="line">each site fits a small classifier on its own verdicts, reading column names from <code>data/columns.json</code></p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step todo"><div class="num">4</div><div class="body">
+  <span class="pill">ML side</span><p class="title">NVFlare: average the weights, sum the counts</p>
+  <p class="line">two jobs in simulator mode · checked: NVFlare 2.9.0 installs on Windows with Python 3.12</p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step todo"><div class="num">5</div><div class="body">
+  <span class="pill">not started</span><p class="title">Scoring</p>
+  <p class="line">false alarms on discordant variants · model quality against site size · cost of hiding small counts</p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step todo"><div class="num">6</div><div class="body">
+  <span class="pill">not started</span><p class="title">Patient query</p>
+  <p class="line">one variant in, carrier counts from every site out · example ready: DSP N1526K</p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step todo"><div class="num">7</div><div class="body">
+  <span class="pill">not started</span><p class="title">Verdict and disease shortlist</p>
+  <p class="line">frequency into the trained model · symptoms matched to diseases with the open HPO file</p>
+</div></div>
+
+</div>
+</body>
+</html>

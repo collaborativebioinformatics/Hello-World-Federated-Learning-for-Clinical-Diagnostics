@@ -31,7 +31,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" style="fill:none;stroke:#888780;stroke-width:1.5"/></marker></defs></svg>
 <div class="wrap"><div class="fc">
 <h1>Federated variant classification with population context</h1>
-<p class="intro">Three public sources join into one table, which splits into a held-out test set and three simulated hospitals. Each hospital trains locally, an NVFlare server averages the weights in a loop, the held-out set grades the result, then a patient query collects counts from every hospital and produces a verdict. Rows never leave a site. All numbers are illustrative.</p>
+<p class="intro">Three public sources join into one table, which splits into a held-out test set and three simulated hospitals. Each hospital trains locally, an NVFlare server averages the weights in a loop, the held-out set grades the result, then a patient query collects counts from every hospital and produces a verdict. Rows never leave a site. Variant scores and frequencies are real; weights, AUCs, probabilities and patient counts are illustrative.</p>
 
 <div style="display:flex;gap:40px">
 <div class="box" style="width:200px"><p class="cap">ClinVar</p><p class="sub" style="margin:0">expert verdict → label</p></div>
@@ -40,24 +40,24 @@
 </div>
 <svg width="680" height="40" aria-hidden="true"><path class="ln" d="M100 0V20H580V0"/><path class="ln" d="M340 0V40" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">1. One joined table</p><p class="sub">join the three sources by variant · same columns for every hospital</p>
+<div class="box" style="width:680px"><p class="cap">1. One joined table</p><p class="sub">one row per variant · scores are 0 to 1 rank scores, higher = more damaging</p>
 <table class="tb"><tr><th>variant</th><th>CADD</th><th>AlphaMis</th><th>AF NFE</th><th>AF SAS</th><th>AF AFR</th><th>label</th></tr>
-<tr><td>MYH7 R403Q</td><td>32</td><td>0.98</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
-<tr><td>TTN I1234V</td><td>8</td><td>0.05</td><td class="af">.021</td><td class="af">.015</td><td class="af">.009</td><td class="lab">0</td></tr>
-<tr><td>MYBPC3 V158M</td><td>22</td><td>0.41</td><td class="af">.0003</td><td class="af">.0009</td><td class="af">.012</td><td class="lab">0</td></tr>
-<tr><td>TNNT2 R92W</td><td>29</td><td>0.95</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
-<tr><td>… a few thousand rows</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div>
+<tr><td>MYH7 R403Q</td><td>0.93</td><td>0.81</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
+<tr><td>TTN I3716V</td><td>0.08</td><td>0.04</td><td class="af">.019</td><td class="af">.041</td><td class="af">.004</td><td class="lab">0</td></tr>
+<tr><td>DSP N1526K</td><td>0.22</td><td>0.47</td><td class="af">.0005</td><td class="af">.0003</td><td class="af">.152</td><td class="lab">0</td></tr>
+<tr><td>TNNT2 R92W</td><td>0.91</td><td>0.79</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
+<tr><td>… 8,790 rows</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div>
 <svg width="680" height="40" aria-hidden="true"><path class="ln" d="M340 0V20M80 20H599"/><path class="ln" d="M80 20V40" marker-end="url(#ah)"/><path class="ln" d="M253 20V40" marker-end="url(#ah)"/><path class="ln" d="M426 20V40" marker-end="url(#ah)"/><path class="ln" d="M599 20V40" marker-end="url(#ah)"/></svg>
 
 <div style="display:flex;gap:13px;align-items:stretch">
 <div class="box" style="width:160px;border-style:dashed"><p class="cap">2. Held-out test</p><p class="sub">locked first, never trained on</p>
-<table class="tb"><tr><th>variant</th><th>label</th></tr><tr><td>E22K</td><td class="lab">1</td></tr><tr><td>R326Q</td><td class="lab">0</td></tr></table></div>
+<table class="tb"><tr><th>variant</th><th>label</th></tr><tr><td>R719W</td><td class="lab">1</td></tr><tr><td>T834M</td><td class="lab">0</td></tr></table></div>
 <div class="box" style="width:160px"><p class="cap">2. site_oslo</p><p class="sub">AF = European</p>
-<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>R403Q</td><td class="af">0</td><td class="lab">1</td></tr><tr><td>I1234V</td><td class="af">.021</td><td class="lab">0</td></tr></table></div>
+<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>R403Q</td><td class="af">0</td><td class="lab">1</td></tr><tr><td>I3716V</td><td class="af">.019</td><td class="lab">0</td></tr></table></div>
 <div class="box" style="width:160px"><p class="cap">2. site_karachi</p><p class="sub">AF = South Asian</p>
-<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>R92W</td><td class="af">0</td><td class="lab">1</td></tr><tr><td>I1234V</td><td class="af">.015</td><td class="lab">0</td></tr></table></div>
+<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>R92W</td><td class="af">0</td><td class="lab">1</td></tr><tr><td>I3716V</td><td class="af">.041</td><td class="lab">0</td></tr></table></div>
 <div class="box" style="width:160px"><p class="cap">2. site_lagos</p><p class="sub">AF = African</p>
-<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>V158M</td><td class="af">.012</td><td class="lab">0</td></tr><tr><td>R403Q</td><td class="af">0</td><td class="lab">1</td></tr></table></div>
+<table class="tb"><tr><th>variant</th><th>AF</th><th>label</th></tr><tr><td>N1526K</td><td class="af">.152</td><td class="lab">0</td></tr><tr><td>R403Q</td><td class="af">0</td><td class="lab">1</td></tr></table></div>
 </div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M80 0V36"/><path class="ln" d="M253 0V36" marker-end="url(#ah)"/><path class="ln" d="M426 0V36" marker-end="url(#ah)"/><path class="ln" d="M599 0V36" marker-end="url(#ah)"/></svg>
 
@@ -83,24 +83,24 @@
 <tr><td>everything pooled</td><td>0.92</td><td>0.89</td><td>0.88</td><td>ceiling, not allowed in real life</td></tr></table></div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">6. Patient arrives at Oslo → ask every hospital for counts</p><p class="sub">African ancestry, carries MYBPC3 V158M, heart symptoms as HPO terms</p>
+<div class="box" style="width:680px"><p class="cap">6. Patient arrives at Oslo → ask every hospital for counts</p><p class="sub">West African ancestry, carries DSP N1526K (0.05% in Europeans), heart symptoms as HPO terms</p>
 <table class="tb"><tr><th>hospital</th><th>carriers</th><th>tested</th><th>carriers among sick</th><th>carriers among healthy</th></tr>
-<tr><td>Oslo</td><td>1</td><td>4000</td><td>1 / 600</td><td>0 / 3400</td></tr>
+<tr><td>Oslo</td><td>4</td><td>4000</td><td>1 / 600</td><td>3 / 3400</td></tr>
 <tr><td>Karachi</td><td>2</td><td>3000</td><td>0 / 500</td><td>2 / 2500</td></tr>
-<tr><td>Lagos</td><td class="af">24</td><td>2000</td><td>4 / 350</td><td class="af">20 / 1650</td></tr></table>
-<p class="sub" style="margin:6px 0 0">summed: 1.2% of African-ancestry patients carry it, mostly healthy ones · only counts travel</p></div>
+<tr><td>Lagos</td><td class="af">560</td><td>2000</td><td>98 / 350</td><td class="af">462 / 1650</td></tr></table>
+<p class="sub" style="margin:6px 0 0">summed: 28% of Lagos patients carry it, sick and healthy alike · only counts travel</p></div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">7. Verdict and shortlist</p><p class="sub">frequency goes into the step 4 formula · symptoms go into PhenoDis</p>
+<div class="box" style="width:680px"><p class="cap">7. Verdict and shortlist</p><p class="sub">frequency goes into the step 4 formula · symptoms are matched to diseases with HPO</p>
 <div style="display:flex;gap:16px;flex-wrap:wrap">
 <table class="tb"><tr><th>model knows</th><th>p(disease)</th><th>call</th></tr>
 <tr><td>Oslo frequency only</td><td>0.61</td><td class="bad">suspicious</td></tr>
 <tr><td>plus patient's population AF</td><td>0.08</td><td class="ok">likely benign</td></tr></table>
-<table class="tb"><tr><th>PhenoDis match on symptoms</th><th>rank</th></tr>
+<table class="tb"><tr><th>HPO disease match on symptoms</th><th>rank</th></tr>
 <tr><td>hypertrophic cardiomyopathy</td><td>1</td></tr><tr><td>dilated cardiomyopathy</td><td>2</td></tr></table>
 </div></div>
 
-<p class="legend">Blue = the answer being learned. Amber = frequency, the only column that differs per hospital. Short variant names in step 2 are the second half of the step 1 names. All numbers are illustrative.</p>
+<p class="legend">Blue = the answer being learned. Amber = frequency, the only column that differs per hospital. Short variant names in step 2 are the second half of the step 1 names. Scores and frequencies are real values; weights, AUCs, probabilities and patient counts are illustrative.</p>
 </div></div>
 </body>
 </html>

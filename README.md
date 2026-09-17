@@ -15,7 +15,7 @@ Team 12: federated variant classification with population context
 
 **Short answer to how:** every hospital holds the same kind of table (variant, prediction scores, frequency, expert label). Each trains a small classifier on its own rows. An NVFlare server averages the model weights and sends them back. Only weights travel during training, and only counts travel when a patient is queried. Rows never leave.
 
-> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. Every number in the tables below is illustrative.
+> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. In the example tables, variant scores and frequencies are real values from our built table; model weights, AUCs, probabilities and hospital patient counts are illustrative.
 
 ---
 
@@ -34,7 +34,8 @@ Team 12: federated variant classification with population context
 | Federated learning, FedAvg | Each site trains locally; a server averages the model **weights**, not the predictions and not the data. |
 | AUC | One score for a classifier: 0.5 is a coin flip, 1.0 is perfect. |
 | HPO | Standard vocabulary for symptoms. |
-| PhenoDis | Database of rare cardiac diseases annotated with HPO symptoms and ClinVar variants. |
+| PanelApp | Genomics England's public catalogue of the gene panels NHS labs use. "Green" genes are diagnostic-grade. Our gene list comes from it. |
+| HPO annotations | An open file that lists, for thousands of diseases, which HPO symptoms they cause. Used to match a patient's symptoms to diseases. |
 
 ---
 
@@ -45,7 +46,7 @@ Team 12: federated variant classification with population context
 Source for the picture: [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html). Re-render with headless Chrome after editing:
 
 ```
-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1420 --screenshot=docs/pipeline_flowchart.png docs/pipeline_flowchart.html
+chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1440 --screenshot=docs/pipeline_flowchart.png docs/pipeline_flowchart.html
 ```
 
 <details>
@@ -98,7 +99,7 @@ flowchart TD
     K -.->|"counts only"| Q
     L -.->|"counts only"| Q
 
-    V["7. Verdict and shortlist<br/>frequency into the trained model<br/>symptoms into PhenoDis"]
+    V["7. Verdict and shortlist<br/>frequency into the trained model<br/>symptoms matched to diseases via HPO"]
     Q --> V
     S -->|"trained model"| V
 ```
@@ -117,16 +118,16 @@ Join three public sources by variant. Every hospital will use exactly these colu
 
 | variant | CADD | AlphaMis | AF NFE | AF SAS | AF AFR | label |
 |---|---|---|---|---|---|---|
-| MYH7 R403Q | 32 | 0.98 | 0 | 0 | 0 | 1 |
-| TTN I1234V | 8 | 0.05 | .021 | .015 | .009 | 0 |
-| MYBPC3 V158M | 22 | 0.41 | .0003 | .0009 | .012 | 0 |
-| TNNT2 R92W | 29 | 0.95 | 0 | 0 | 0 | 1 |
-| … a few thousand rows | | | | | | |
+| MYH7 R403Q | 0.93 | 0.81 | 0 | 0 | 0 | 1 |
+| TTN I3716V | 0.08 | 0.04 | .019 | .041 | .004 | 0 |
+| DSP N1526K | 0.22 | 0.47 | .0005 | .0003 | .152 | 0 |
+| TNNT2 R92W | 0.91 | 0.79 | 0 | 0 | 0 | 1 |
+| … 8,790 rows | | | | | | |
 
 - Label: ClinVar pathogenic or likely pathogenic = `1`, benign or likely benign = `0`, uncertain dropped. At least one review star.
-- Scores: 10 to 20 numeric columns from dbNSFP. Missense single-nucleotide variants only, since most scores exist only for those.
-- Frequencies: one AF column per gnomAD population.
-- Restrict to a cardiac gene panel taken from PhenoDis so the table stays small and matches the patient demo.
+- Scores: dbNSFP **rank scores**, each tool rescaled to 0 to 1 where higher always means more damaging. One direction and one scale for every column, so no hospital has to share scaling statistics. Missense single-nucleotide variants only, since most scores exist only for those.
+- Frequencies: one AF column per gnomAD population (exomes v2.1.1, as served by myvariant.info). Absent from gnomAD is recorded as 0.
+- Restricted to 104 genes: the green, diagnostic-grade genes from six heart-related [Genomics England PanelApp](https://panelapp.genomicsengland.co.uk) panels signed off by the NHS Genomic Medicine Service. `scripts/00_fetch_gene_panel.py` fetches them at pinned versions and writes [config/cardiac_gene_panel.txt](config/cardiac_gene_panel.txt), which records each panel, its version and which panel each gene came from.
 
 ### Step 2. Lock a test set first, then split the rest into hospitals
 
@@ -135,8 +136,8 @@ The held-out rows are set aside before anything else and are never trained on. T
 | `data/site_oslo` | | | | `data/site_karachi` | | | | `data/site_lagos` | | |
 |---|---|---|---|---|---|---|---|---|---|---|
 | variant | AF NFE | label | | variant | AF SAS | label | | variant | AF AFR | label |
-| R403Q | 0 | 1 | | R92W | 0 | 1 | | V158M | .012 | 0 |
-| I1234V | .021 | 0 | | I1234V | .015 | 0 | | R403Q | 0 | 1 |
+| R403Q | 0 | 1 | | R92W | 0 | 1 | | N1526K | .152 | 0 |
+| I3716V | .019 | 0 | | I3716V | .041 | 0 | | R403Q | 0 | 1 |
 
 The same variant has the same scores and the same label everywhere. The only cell that differs per hospital is the frequency, because "how common is this" depends on whose patients you count.
 
@@ -180,28 +181,28 @@ Expected shape: federated lands near pooled without anyone sharing rows, and the
 
 ### Step 6. A patient arrives, ask every hospital for counts
 
-A patient of African ancestry at Oslo carries `MYBPC3 V158M` and has heart symptoms coded as HPO terms. Oslo's own data says the variant is rare. The query asks each hospital how many of its patients carry it and how many of those were sick.
+A patient of West African ancestry at Oslo carries `DSP N1526K` and has heart symptoms coded as HPO terms. Oslo's own data says the variant is rare: 0.05% in Europeans. In gnomAD it sits at 15% in African-ancestry samples, and ClinVar calls it benign. The query asks each hospital how many of its patients carry it and how many of those were sick.
 
 | hospital | carriers | tested | carriers among sick | carriers among healthy |
 |---|---|---|---|---|
-| Oslo | 1 | 4000 | 1 / 600 | 0 / 3400 |
+| Oslo | 4 | 4000 | 1 / 600 | 3 / 3400 |
 | Karachi | 2 | 3000 | 0 / 500 | 2 / 2500 |
-| Lagos | 24 | 2000 | 4 / 350 | 20 / 1650 |
+| Lagos | 560 | 2000 | 98 / 350 | 462 / 1650 |
 
-Summed: 1.2% of African-ancestry patients carry it, mostly healthy ones. Only counts travel, never a patient record.
+Summed: 28% of Lagos patients carry it, sick and healthy alike. Only counts travel, never a patient record. The counts are simulated to match the real gnomAD frequencies.
 
 Query response format per site: `variant_id, AC, AN, AC_affected, AN_affected, AC_unaffected, AN_unaffected`.
 
 ### Step 7. Verdict and shortlist
 
-The frequency from step 6 fills the AF column for the patient's variant and goes into the step 4 model. The HPO terms go into PhenoDis for a ranked disease list.
+The frequency from step 6 fills the AF column for the patient's variant and goes into the step 4 model. The HPO terms are matched against the open HPO disease annotations for a ranked disease list.
 
 | model knows | p(disease) | call |
 |---|---|---|
 | Oslo frequency only | 0.61 | suspicious |
 | plus patient's population AF | 0.08 | likely benign |
 
-| PhenoDis match on symptoms | rank |
+| HPO disease match on symptoms | rank |
 |---|---|
 | hypertrophic cardiomyopathy | 1 |
 | dilated cardiomyopathy | 2 |
@@ -214,7 +215,7 @@ Frequency is one-directional evidence. A variant that is common in healthy peopl
 
 The model learns the strength of that veto from expert verdicts. The query supplies the fact the veto needs: how common the variant is in people like this patient. Oslo does not need to have treated a single African-ancestry patient to get the call right.
 
-Two known exceptions, which is why the query returns sick and healthy counts separately: recessive conditions (healthy carriers are common) and late-onset or partial-effect variants such as `TTR V122I`, common in African-ancestry people and still a cause of cardiac amyloidosis. If carriers pile up among the sick, the veto should not fire.
+Two known exceptions, which is why the query returns sick and healthy counts separately: recessive conditions (healthy carriers are common) and late-onset or partial-effect variants such as `TTR V122I`, common in African-ancestry people and still a cause of cardiac amyloidosis. It is in our table under its modern name `TTR V142I`: pathogenic, 1.6% in African-ancestry samples, near zero elsewhere. If carriers pile up among the sick, the veto should not fire.
 
 ---
 
@@ -283,9 +284,10 @@ Who benefits: the patient treated at a hospital whose reference data is mostly a
 | Source | What we take | Access |
 |---|---|---|
 | ClinVar | labels: P/LP = 1, B/LB = 0, VUS dropped, GRCh38 | [AWS Open Data mirror](https://registry.opendata.aws/) or NCBI FTP |
-| dbNSFP | 10 to 20 numeric prediction scores | [dbnsfp.org](https://dbnsfp.org) is tens of GB; for a gene panel, the [myvariant.info](https://myvariant.info) batch API returns dbNSFP, CADD, gnomAD and ClinVar fields per variant in minutes |
-| gnomAD | AF per population (NFE, SAS, AFR, …) | open, also via myvariant.info |
-| PhenoDis | rare cardiac diseases with HPO terms and ClinVar variants; also defines the gene panel | [mips.helmholtz-muenchen.de/phenodis](https://www.mips.helmholtz-muenchen.de/phenodis) |
+| dbNSFP | rank scores for 17 tools, version 4.8a | via the [myvariant.info](https://myvariant.info) API, which returns dbNSFP, gnomAD and ClinVar fields in one record. The full download at [dbnsfp.org](https://dbnsfp.org) is about 50 GB and needs registration with an institutional email |
+| gnomAD | AF per population (NFE, SAS, AFR, …), exomes v2.1.1 | via myvariant.info. The current v4.1 files are open but 2 to 19 GB per chromosome |
+| PanelApp | the gene list: green genes from six NHS-signed-off heart panels, versions pinned | open API at [panelapp.genomicsengland.co.uk](https://panelapp.genomicsengland.co.uk), no login. Cite Martin et al., *Nature Genetics* 2019 |
+| HPO annotations | disease-to-symptom links for step 7 | open file, 36 MB: [phenotype.hpoa](https://purl.obolibrary.org/obo/hp/hpoa/phenotype.hpoa). We use this instead of PhenoDis, whose download sits behind a login |
 | Manrai et al. 2016 | real misclassified variants for the patient demo | paper tables |
 | UKB synthetic dataset (optional) | a name, age and sex for the demo patient; contains no genotypes or HPO terms | [biobank.ndph.ox.ac.uk/synthetic_dataset](https://biobank.ndph.ox.ac.uk/synthetic_dataset) |
 
@@ -293,9 +295,48 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ---
 
-## 8. Decisions and conventions
+## 8. Build status and how to run
+
+![Recipe status: steps 0 and 1 are built and tested, step 2 is next, steps 3 to 7 are not started](docs/recipe_status.png)
+
+Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file.
+
+Needs [uv](https://docs.astral.sh/uv/). Python 3.12 and the packages install themselves on first run.
+
+```
+uv sync
+uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp (already committed)
+uv run python scripts/01_build_table.py             # step 1, about 4 minutes, then cached
+uv run python scripts/01_build_table.py --refresh   # re-download from myvariant.info
+```
+
+**Step 1 is built.** It writes `data/variants.csv` and `data/columns.json`, the list of columns later steps should read instead of hard-coding. The table opens in Excel with the readable columns first: name, gene, verdict, stars, then the three site frequencies. Every column is explained in plain language in [docs/table_columns.md](docs/table_columns.md). `data/` is git-ignored because the upstream scores carry non-commercial terms, so we share the recipe and not the table.
+
+What came out on 17 September 2026:
+
+| | |
+|---|---|
+| rows | 8,790 missense variants in 97 genes |
+| labels | 4,960 pathogenic, 3,830 benign |
+| features kept | 13 of 17 rank scores; four dropped for more than 30% missing |
+| found in gnomAD | 3,680; the rest are recorded as frequency 0 |
+| population-discordant | 622 variants whose frequency differs at least tenfold between the three site populations: 371 highest in AFR, 177 in SAS, 74 in NFE |
+
+What the real data told us:
+
+- **Labels track genes.** DMD, APOB, TTN and FLNA are almost all benign; FBN1, LDLR and MYH7 almost all pathogenic. Three genes supply 45% of the pathogenic rows and five supply 41% of the benign ones. A model can score well just by recognising the gene. Only 30 genes have at least ten of each verdict. Report AUC within genes, or with whole genes held out, before trusting a headline number.
+- **The discordant subset is 620 benign to 2 pathogenic**, so AUC means nothing there. The right measure is the false-alarm rate: how many of those benign variants the model still calls disease-causing with Oslo-only frequency, versus with the patient's own population frequency.
+- **The motivating problem is visible in our own table.** `TNNT2 K253R` is benign, at 1.5% in Europeans and about 15% in both South Asian and African-ancestry samples. `TTR V142I` is one of the two discordant variants that are pathogenic.
+- **Seven panel genes are missing.** ACTC1, APOA2, APOC2, GLA, NOTCH1, PLN and TNNI3K have ClinVar entries in myvariant.info but no dbNSFP scores in its hg38 index.
+- **The gene list inherits a European lean.** PanelApp is curated in the UK from a literature built mostly on European-ancestry families, and ClinVar verdicts come mostly from US and European labs. We correct the frequency evidence, not these two.
+- Label rule: a variant is kept only if every ClinVar record with at least one review star agrees. About 8,000 downloaded variants were dropped as uncertain, conflicting or unreviewed.
+
+---
+
+## 9. Decisions and conventions
 
 - Real data is the signal. Simulated data is scaffolding (sites, patient). Never train on simulated labels.
+- Open data only: every source downloads without a login or registration.
 - Any hand-edited "spiked" frequencies live only in the step 6 patient demo, never in the rows the AUC is computed on.
 - Goal B "same frequency, different effect" is shown as "the query supports it," not measured; we have no real carrier-outcome data.
 - If FedAvg blurs population differences, add per-population AF and the patient's population as input features (the population-aware column of the grid).
@@ -304,4 +345,4 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 - Common schema everywhere: `variant_id, <feature columns>, af_local, label`.
 - A working end-to-end pipeline beats any single polished step. Steps 1 to 5 are the demo; step 6 is an afternoon; step 7 is the stretch goal.
 
-Open: which populations to use (suggested NFE vs SAS vs AFR), NVFlare vs Flower (decide day one), how many score columns to keep.
+Open: NVFlare vs Flower (decide day one). Settled by the data: the sites are NFE, SAS and AFR, and 12 score columns are kept.
