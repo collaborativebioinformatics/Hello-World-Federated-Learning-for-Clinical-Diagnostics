@@ -15,7 +15,7 @@ Team 12: federated variant classification with population context
 
 **Short answer to how:** every hospital holds the same kind of table (variant, prediction scores, frequency, expert label). Each trains a small classifier on its own rows. An NVFlare server averages the model weights and sends them back. Only weights travel during training, and only counts travel when a patient is queried. Rows never leave.
 
-> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. In the example tables, variant scores and frequencies are real values from our built table; model weights, AUCs, probabilities and hospital patient counts are illustrative.
+> Labels, scores and frequencies are real public data (ClinVar, dbNSFP, gnomAD). The hospitals and the demo patient are simulated. We never train on simulated labels. In the example tables, variant scores and frequencies are real values from our built table, and hospital patient counts are the ones step 2 simulates; model weights, AUCs and probabilities are illustrative.
 
 ---
 
@@ -41,12 +41,12 @@ Team 12: federated variant classification with population context
 
 ## 1. The pipeline in one picture
 
-![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png)
+![Seven-step pipeline: three sources join into one table, split into a held-out test set and three hospital sites, local training, NVFlare weight averaging, per-population AUC, a federated count query for a patient, and a verdict](docs/pipeline_flowchart.png?v=3)
 
 Source for the picture: [docs/pipeline_flowchart.html](docs/pipeline_flowchart.html). Re-render with headless Chrome after editing:
 
 ```
-chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1440 --screenshot=docs/pipeline_flowchart.png docs/pipeline_flowchart.html
+chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1496 --screenshot=docs/pipeline_flowchart.png docs/pipeline_flowchart.html
 ```
 
 <details>
@@ -192,13 +192,13 @@ Expected shape: federated lands near pooled without anyone sharing rows, and the
 
 A patient of West African ancestry at Oslo carries `DSP N1526K` and has heart symptoms coded as HPO terms. Oslo's own data says the variant is rare: 0.05% in Europeans. In gnomAD it sits at 15% in African-ancestry samples, and ClinVar calls it benign. The query asks each hospital how many of its patients carry it and how many of those were sick.
 
-| hospital | carriers | tested | carriers among sick | carriers among healthy |
+| hospital | copies seen | gene copies looked at | among sick | among healthy |
 |---|---|---|---|---|
-| Oslo | 4 | 4000 | 1 / 600 | 3 / 3400 |
-| Karachi | 2 | 3000 | 0 / 500 | 2 / 2500 |
-| Lagos | 560 | 2000 | 98 / 350 | 462 / 1650 |
+| Oslo | 24 | 40,000 | 3 / 6,000 | 21 / 34,000 |
+| Karachi | 4 | 8,000 | 2 / 1,200 | 2 / 6,800 |
+| Lagos | 1,190 | 8,000 | 193 / 1,200 | 997 / 6,800 |
 
-Summed: 28% of Lagos patients carry it, sick and healthy alike. Only counts travel, never a patient record. The counts are simulated to match the real gnomAD frequencies.
+At Lagos 15% of gene copies carry it, among sick and healthy alike. Only counts travel, never a patient record. These are the actual rows of each site's `patient_counts.csv`, simulated by step 2 from the real gnomAD frequencies. In that build Lagos is also the only hospital holding a verdict on this variant.
 
 Each site answers with one row of its `patient_counts.csv`: `variant_id, ac, an, ac_affected, an_affected, ac_unaffected, an_unaffected`.
 
@@ -306,9 +306,9 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0 and 1 are built and tested, step 2 runs and is in review, steps 3 to 7 are not started](docs/recipe_status.png)
+![Recipe status: steps 0 and 1 are built and tested, step 2 runs and is in review, steps 3 to 7 are not started](docs/recipe_status.png?v=3)
 
-Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file.
+Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file. Then raise the `?v=` number on the image link above, otherwise GitHub keeps serving its cached copy of the old picture.
 
 Needs [uv](https://docs.astral.sh/uv/). Python 3.12 and the packages install themselves on first run.
 
