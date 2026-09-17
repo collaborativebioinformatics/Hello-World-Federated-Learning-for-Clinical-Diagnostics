@@ -71,11 +71,51 @@ def panel(title: str, note: str, stats: dict[str, tuple[float, float]], top: flo
     return "\n".join(out)
 
 
+def forest(title: str, note: str, rows: list[tuple[str, str, float, float]], top: float,
+           span: float) -> str:
+    """Paired differences against zero. A centred axis, because the sign is the question."""
+    label_width, plot_left, plot_width, row_height = 214.0, 224.0, 286.0, 38.0
+    zero = plot_left + plot_width / 2
+    out = [f'<text x="0" y="{top}" class="panel">{title}</text>',
+           f'<text x="0" y="{top + 17}" class="note">{note}</text>']
+    baseline = top + 32
+    for step in range(5):
+        x = plot_left + plot_width * step / 4
+        value = -span + 2 * span * step / 4
+        out.append(f'<line x1="{x}" y1="{baseline}" x2="{x}" y2="{baseline + row_height * len(rows)}" '
+                   f'class="{"zero" if step == 2 else "grid"}"/>')
+        out.append(f'<text x="{x}" y="{baseline + row_height * len(rows) + 13}" '
+                   f'text-anchor="middle" class="tick">{value:+.3f}</text>')
+
+    for row, (label, sub, mean, std) in enumerate(rows):
+        y = baseline + row * row_height + row_height / 2
+        centre = zero + plot_width / 2 * mean / span
+        lo, hi = zero + plot_width / 2 * (mean - std) / span, zero + plot_width / 2 * (mean + std) / span
+        out.append(f'<g><title>{label}: {mean:+.4f} (sd {std:.4f})</title>'
+                   f'<line x1="{lo}" y1="{y}" x2="{hi}" y2="{y}" class="err"/>'
+                   f'<line x1="{lo}" y1="{y - 4}" x2="{lo}" y2="{y + 4}" class="err"/>'
+                   f'<line x1="{hi}" y1="{y - 4}" x2="{hi}" y2="{y + 4}" class="err"/>'
+                   f'<circle cx="{centre}" cy="{y}" r="4.5" fill="{FULL}"/></g>')
+        out.append(f'<text x="{label_width}" y="{y - 1}" text-anchor="end" class="cat">{label}</text>')
+        out.append(f'<text x="{label_width}" y="{y + 10}" text-anchor="end" class="sub">{sub}</text>')
+        out.append(f'<text x="{plot_left + plot_width + 8}" y="{y + 4}" class="value">{mean:+.4f}</text>')
+    return "\n".join(out)
+
+
 def main() -> int:
     results = json.loads((ROOT / "data" / "results_federated.json").read_text())
     summary = results["summary"]
     auc = {arm: tuple(summary[arm]["auc_federated_query"]) for arm, _, _ in ARMS}
     alarms = {arm: tuple(summary[arm]["false_alarms_federated_query"]) for arm, _, _ in ARMS}
+    home = results["home_site_comparison"]
+    rows_by_pop = results["population_rows"]
+    readable = {"nfe": "European (NFE)", "sas": "South Asian (SAS)", "afr": "African (AFR)"}
+    difference = [
+        (f'{readable[p]} vs {home[p]["own_site"].replace("site_", "").capitalize()}',
+         f'{rows_by_pop[p][0]} rows, {rows_by_pop[p][1]} pathogenic',
+         home[p]["difference"][0], home[p]["difference"][1])
+        for p in ("nfe", "sas", "afr")
+    ]
 
     figure = f"""<!DOCTYPE html>
 <!--
@@ -100,6 +140,7 @@ def main() -> int:
   .tick{{font-size:9.5px;fill:{MUTED_INK};font-family:ui-monospace,Menlo,Consolas,monospace}}
   .grid{{stroke:#d9d7cf;stroke-width:1}}
   .err{{stroke:{INK};stroke-width:1.5}}
+  .zero{{stroke:{INK};stroke-width:1.5}}
   .caption{{font-size:11px;color:{MUTED_INK};margin:10px 0 0;line-height:1.55}}
   .caption b{{color:{INK};font-weight:500}}
 </style>
@@ -112,7 +153,7 @@ three simulated hospitals as separate processes. {results["runs"]} runs; what ch
 runs is which hospital classified which variant. Mean (standard deviation) over the runs,
 scored on the locked test set with the federated count query as frequency evidence.</p>
 
-<svg width="680" height="405" role="img"
+<svg width="680" height="592" role="img"
      aria-label="Two panels, three arms each. AUC is 0.9781 for Oslo only, 0.9783 for federated and 0.9784 for pooled, with standard deviations of 0.0002 or less. False alarms among the 183 discordant benign variants are 2.2 for Oslo only with a standard deviation of 0.4, and exactly 2.0 for both federated and pooled in every run.">
   <defs>
     <pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
@@ -123,6 +164,9 @@ scored on the locked test set with the federated count query as frequency eviden
 {panel("AUC on the locked test set", "higher is better &middot; error bars are there, and smaller than the line width", auc, 18, 1.0, ".4f", ".2f")}
 {panel("False alarms among the 183 population-discordant benign variants",
        "lower is better &middot; each arm uses a threshold it could actually have computed", alarms, 218, 8, ".1f", ".0f")}
+{forest("Does the global model serve a population worse than its own hospital's model?",
+        "federated minus that population's own hospital &middot; right of zero means federating helped",
+        difference, 415, 0.008)}
 </svg>
 
 <p class="caption"><b>Federated is indistinguishable from pooled on every metric</b>, and the gap
@@ -133,6 +177,18 @@ not that it wins, it is that <b>it costs nothing</b>.</p>
 <b>varies</b>: its false alarms move with which variants it happened to be dealt, while
 federated and pooled returned exactly the same count in all five runs. A single hospital's
 result depends on its luck of the draw; federating removes that dependence.</p>
+<p class="caption"><b>No population is served worse by the global model than by its own
+hospital's.</b> The one population that gains is African-ancestry, the smallest and the one
+gnomAD covers worst, and it is also where a single site is least stable: Lagos alone varies
+by 0.0027 between deals against 0.0008 federated. Every interval here crosses or touches
+zero, so the honest claim is that federating <b>does not hurt anyone</b>, not that it
+measurably helps AFR &mdash; that slice holds 12 pathogenic variants and the difference is
+about 1.3 standard deviations.</p>
+<p class="caption">The original hypothesis, that a single site collapses on populations it
+does not serve, is <b>refuted</b>: Oslo alone scores 0.9346, 0.9275 and 0.9539 on the
+European, South Asian and African slices. The prediction scores carry the ranking and they
+do not depend on ancestry. What depends on ancestry is the frequency evidence at scoring
+time, and that moves the decision rather than the ranking.</p>
 <p class="caption">The federated arm never sees another site's rows, including for its
 threshold: each site takes the quantile on its own rows under the global model and the
 server averages them by row count, so one number per site crosses the wire alongside the

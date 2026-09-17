@@ -75,6 +75,8 @@ One model, one fixed threshold, the same 183 test variants. All 183 are harmless
 - **Overall accuracy did not move.** The usual summary score, AUC, stayed between 0.97 and 0.98 whatever the model was told and whichever hospital trained it. Frequency matters for a small number of variants, and those are the ones behind a wrong report.
 - **A hospital that consults only its own patients does about as well as the public database.** The gain comes from combining hospitals.
 - **Training across hospitals cost nothing.** The model trained with NVIDIA FLARE, where only 14 numbers per hospital travel, matched a model trained on all the data in one place. Over five runs the AUC was 0.9783 against 0.9784, and both left the same 2 false alarms.
+- **No patient group was left behind by the shared model.** We checked each ancestry group against the model its own hospital would have built alone. European and South Asian patients came out level, and African-ancestry patients came out very slightly ahead. The shared model was also steadier: a small hospital's own model shifted three times as much between runs as the shared one did.
+- **A single hospital did not fail on the ancestries it rarely sees**, which is what we had expected to find. The prediction scores work the same for everyone. What does not travel is how common a variant is, and that changes the verdict on a handful of variants rather than the overall ranking.
 
 These are small numbers from a simulation. The section on limits below says what they can and cannot show. Full tables are in [docs/step3_results.md](docs/step3_results.md) and [docs/step4_results.md](docs/step4_results.md), and `uv run python scripts/03_check_results.py` reprints the numbers in the table above.
 
@@ -90,6 +92,7 @@ These are small numbers from a simulation. The section on limits below says what
 
 - The patients are simulated from the same public frequencies we score against, so the close match between "all three hospitals" and "the true frequency" is partly built in.
 - 183 variants is a small test, and only five calls changed. A larger gene list is the remedy.
+- The per-ancestry checks rest on 12 harmful variants for African-ancestry patients and 23 for South Asian. They show a direction, not a measured size.
 - The test set has no harmful variant that is common in one population, so the risk of wrongly clearing such a variant could not be measured. `TTR V142I` shows the case is real.
 - Expert verdicts themselves lean on the same frequency databases.
 - Rule 2 wrongly kept two harmless variants flagged on the strength of six carriers. It needs a proper statistical test across hospitals.

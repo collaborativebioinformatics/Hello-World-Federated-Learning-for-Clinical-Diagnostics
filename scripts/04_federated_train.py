@@ -44,6 +44,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 WORKSPACE = DATA_DIR / "fedavg_runs"
 
+# The hospital whose patients are this population. "Does the global model serve
+# each population as well as that population's own hospital would?" is the direct
+# test of the non-IID worry, and it is a paired one: same test rows, two models.
+HOME_SITE = {"nfe": "site_oslo", "sas": "site_karachi", "afr": "site_lagos"}
+
 ROUNDS = 20  # aggregation rounds
 LOCAL_EPOCHS = 150  # gradient steps a client takes per round; 20 x 150 = the 3000 step 3 uses
 RUNS = 5
@@ -127,12 +132,16 @@ def run_fedavg(run_dir: Path, rounds: int, n_features: int) -> np.ndarray:
 
 def evaluate(weights: np.ndarray, test: pd.DataFrame, score_columns: list[str],
              evidence: dict[str, np.ndarray], threshold: float, discordant_benign: np.ndarray,
-             label: np.ndarray) -> dict[str, float]:
+             label: np.ndarray, populations: dict[str, np.ndarray]) -> dict[str, float]:
     out = {}
     for name, source in evidence.items():
         probability = step3.predict(step3.features(test, score_columns, source), weights)
         out[f"auc_{name}"] = step3.roc_auc(label, probability)
         out[f"false_alarms_{name}"] = int((probability[discordant_benign] >= threshold).sum())
+    # Per population, under the evidence a deployed system would have.
+    probability = step3.predict(step3.features(test, score_columns, evidence["federated_query"]), weights)
+    for population, mask in populations.items():
+        out[f"auc_pop_{population}"] = step3.roc_auc(label[mask], probability[mask])
     return out
 
 
@@ -149,6 +158,11 @@ def main() -> int:
     label = test.label.to_numpy()
     evidence = step3.evidence_columns(test)
     discordant_benign = (test.pop_discordant.to_numpy() == 1) & (label == 0)
+    # Each test variant is labelled with the population it is most common in, by
+    # the rule step 2 applied. Two thirds are "none": gnomAD never saw them in any
+    # of the three, so they belong to no population and are reported separately.
+    populations = {p: (test["pop"].to_numpy() == p) for p in ["nfe", "sas", "afr", "none"]}
+    population_rows = {p: (int(mask.sum()), int(label[mask].sum())) for p, mask in populations.items()}
 
     # The training pool is every variant that is not in the locked test set. The
     # test set never moves, so the five runs differ only in the deal.
@@ -159,6 +173,7 @@ def main() -> int:
 
     arms = ["oslo_only", "federated", "pooled"]
     collected: dict[str, list[dict]] = {arm: [] for arm in arms}
+    home: dict[str, list[dict]] = {}
     sizes: list[dict] = []
 
     for run in range(args.runs):
@@ -173,12 +188,18 @@ def main() -> int:
         print(f"run {run + 1}/{args.runs}  seed {seed}  "
               + "  ".join(f"{site.replace('site_', '')} {len(rows)}" for site, rows in hospitals.items()))
 
-        models = {}
-        # Two arms are ordinary local training on this deal.
-        for arm, rows in [("oslo_only", hospitals["site_oslo"]),
-                          ("pooled", pd.concat(hospitals.values()).drop_duplicates("variant_id"))]:
+        models, site_models = {}, {}
+        # Every hospital trains alone. Oslo's model is one of the three arms; the
+        # other two exist so each population can be compared against the model it
+        # would get from its own hospital.
+        for site, rows in hospitals.items():
             X = step3.features(rows, score_columns, rows.af_local.to_numpy())
-            models[arm] = step3.fit(X, rows.label.to_numpy())
+            site_models[site] = step3.fit(X, rows.label.to_numpy())
+        models["oslo_only"] = site_models["site_oslo"]
+        pooled_now = pd.concat(hospitals.values()).drop_duplicates("variant_id")
+        models["pooled"] = step3.fit(
+            step3.features(pooled_now, score_columns, pooled_now.af_local.to_numpy()),
+            pooled_now.label.to_numpy())
         # The third is NVFlare.
         models["federated"] = run_fedavg(run_dir, args.rounds, len(score_columns) + 1)
 
@@ -204,9 +225,23 @@ def main() -> int:
                 threshold = step3.threshold_at_sensitivity(
                     rows.label.to_numpy(), step3.predict(X, models[arm]), step3.TARGET_SENSITIVITY)
             collected[arm].append(evaluate(models[arm], test, score_columns, evidence,
-                                           threshold, discordant_benign, label))
+                                           threshold, discordant_benign, label, populations))
             collected[arm][-1]["threshold"] = threshold
             collected[arm][-1]["weights"] = models[arm].tolist()
+
+        # The paired question: on the rows of one population, is the global model
+        # worse than the model that population's own hospital trained alone?
+        probability_fed = step3.predict(
+            step3.features(test, score_columns, evidence["federated_query"]), models["federated"])
+        for population, site in HOME_SITE.items():
+            mask = populations[population]
+            own = step3.predict(
+                step3.features(test, score_columns, evidence["federated_query"]), site_models[site])
+            home.setdefault(population, []).append({
+                "own_site": site,
+                "auc_own": step3.roc_auc(label[mask], own[mask]),
+                "auc_federated": step3.roc_auc(label[mask], probability_fed[mask]),
+            })
         if not args.keep:
             shutil.rmtree(run_dir / "simulator", ignore_errors=True)
         print()
@@ -233,11 +268,50 @@ def main() -> int:
             print(f"  {title[arm]:<28} {mean:{fmt}} ({std:{fmt}})")
         print()
 
+    # ---- per population ----
+    print("AUC by the population a variant is most common in, federated count evidence")
+    print("  the original hypothesis was that a single site fails on populations it does not serve")
+    header = "".join(f"{p:>16}" for p in populations)
+    print(f"  {'trained on':<28}{header}")
+    print(f"  {'(test rows)':<28}" + "".join(f"{population_rows[p][0]:>16}" for p in populations))
+    print(f"  {'(of which pathogenic)':<28}" + "".join(f"{population_rows[p][1]:>16}" for p in populations))
+    for arm in arms:
+        cells = []
+        for population in populations:
+            mean, std = summarise(arm, f"auc_pop_{population}")
+            cells.append(f"{mean:.4f} ({std:.4f})")
+        print(f"  {title[arm]:<28}" + "".join(f"{c:>16}" for c in cells))
+    print("  12 and 23 pathogenic rows carry an AUC interval wider than any effect here.")
+    print("  'none' is the two thirds of the test set gnomAD never saw in any of the three.\n")
+
+    # ---- the non-IID question, paired ----
+    print("Does the global model serve a population worse than its own hospital's model?")
+    print("  same test rows, two models, so the per-run difference is paired\n")
+    print(f"  {'population':<12}{'own hospital':<16}{'its own model':>18}{'federated':>18}{'difference':>20}")
+    home_summary = {}
+    for population, runs_here in home.items():
+        own = np.array([r["auc_own"] for r in runs_here])
+        fed = np.array([r["auc_federated"] for r in runs_here])
+        difference = fed - own
+        site = runs_here[0]["own_site"].replace("site_", "")
+        print(f"  {population:<12}{site:<16}{own.mean():>11.4f} ({own.std(ddof=1):.4f})"
+              f"{fed.mean():>11.4f} ({fed.std(ddof=1):.4f})"
+              f"{difference.mean():>+13.4f} ({difference.std(ddof=1):.4f})")
+        home_summary[population] = {
+            "own_site": runs_here[0]["own_site"],
+            "auc_own": [float(own.mean()), float(own.std(ddof=1))],
+            "auc_federated": [float(fed.mean()), float(fed.std(ddof=1))],
+            "difference": [float(difference.mean()), float(difference.std(ddof=1))],
+        }
+    print("  A positive difference means federating helped that population.\n")
+
     results = {
         "nvflare_version": __import__("nvflare").__version__,
         "runs": args.runs, "rounds": args.rounds, "local_epochs": LOCAL_EPOCHS,
         "seeds": [100 + r for r in range(args.runs)],
         "hospital_sizes": sizes,
+        "population_rows": population_rows,
+        "home_site_comparison": home_summary,
         "per_run": collected,
         "summary": {arm: {metric: summarise(arm, metric)
                           for metric in collected[arm][0] if metric != "weights"} for arm in arms},
