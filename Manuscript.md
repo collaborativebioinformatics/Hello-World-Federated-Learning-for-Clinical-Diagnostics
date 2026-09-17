@@ -3,13 +3,12 @@
 
 # Hello World! Federated Learning for Clinical Diagnostics: population-aware variant classification across three simulated hospitals
 
-Yan Li<sup>1</sup>, Mohit Panwar<sup>2</sup>, Shreya Srivastava<sup>3</sup>, Oumaima Boussouis<sup>4</sup>, Fenfen Ge<sup>5</sup>
+Yan Li<sup>1</sup>, Mohit Panwar<sup>2</sup>, Shreya Srivastava<sup>3</sup>, Oumaima Boussouis<sup>4</sup>
 
 <sup>1</sup> Department of Public Health, University of Copenhagen, Denmark<br>
 <sup>2</sup> Department of Clinical Neuroscience, Institute of Neuroscience and Physiology, Sahlgrenska Academy, University of Gothenburg, Gothenburg, Sweden<br>
 <sup>3</sup> Department of Computational and Data Sciences, Indian Institute of Science, Bengaluru, India<br>
-<sup>4</sup> ENSIAS, Mohammed V University in Rabat, Morocco<br>
-<sup>5</sup> [affiliation to be added]
+<sup>4</sup> ENSIAS, Mohammed V University in Rabat, Morocco
 
 Correspondence: [name and email to be added]
 
@@ -241,7 +240,7 @@ and the patient query starts with `uv run python scripts/06_query_tui.py`. The t
 
 ## Author contributions
 
-M.P. built the gene panel, the variant table, the first version of the hospital simulation and the patient query. Y.L. reviewed and revised the simulation and the test split and wrote the local training, the federated training and their evaluation. [Contributions of S.S., O.B. and F.G. to be added by the team.]
+M.P. built the gene panel, the variant table, the first version of the hospital simulation and the patient query. Y.L. reviewed and revised the simulation and the test split and wrote the local training, the federated training and their evaluation. [Contributions of S.S. and O.B. to be added by the team.]
 
 ## Acknowledgements
 

@@ -4,6 +4,35 @@ Can hospitals help each other judge a patient's DNA variant while every patient 
 
 > This is a research prototype from a hackathon. The hospitals and their patients are simulated. It must not be used for patient care.
 
+## Try it
+
+A patient carries a DNA variant. Pick it, and every hospital answers with counts.
+
+![The patient query on screen: a variant picker, the reading from the patient's own hospital and from all three hospitals, and one chart with a row per source of evidence](docs/patient_query_tui.png?v=1)
+
+```
+git clone https://github.com/collaborativebioinformatics/Hello-World-Federated-Learning-for-Clinical-Diagnostics.git
+cd Hello-World-Federated-Learning-for-Clinical-Diagnostics
+uv run python scripts/01_build_table.py           # once, about 4 minutes: downloads the public data
+uv run python scripts/02_simulate_hospitals.py    # once, a few seconds: the three hospitals
+uv run python scripts/06_query_tui.py             # the patient query, in a real terminal
+```
+
+Needs [uv](https://docs.astral.sh/uv/), which installs Python and the packages on first run. `uv run python scripts/06_query_variant.py "DSP N1526K"` prints one answer without the interactive screen.
+
+| Try | What it shows |
+|---|---|
+| `DSP N1526K` | Oslo alone cannot clear it. Among healthy patients at Lagos 15% carry it, so it is likely harmless. |
+| `TTR V142I` | Common at Lagos, yet five times more common among the sick, so it stays flagged. It is a known cause of cardiac amyloidosis in people of African ancestry. |
+| `MYH7 R403Q` | Seen nowhere. Frequency says nothing, and the prediction scores have to decide. |
+
+Two fixed rules read the answers. Nothing is generated and nothing is random.
+
+1. Common among healthy patients anywhere, at 0.1% or more: likely harmless.
+2. Common, yet at least three times more frequent among the sick: keep it flagged.
+
+Every bar in the chart is a frequency, and the tick marks 0.1%. A green bar past the tick clears the variant. A red bar well past the green one keeps it flagged. The last line on screen states what crossed hospital walls: one variant name out, counts back, and no patient record. For a patient at Oslo, asking the other two hospitals changes the reading for 492 of 8,682 variants.
+
 ## The problem
 
 A DNA variant that is common among healthy people cannot be the cause of a rare, severe disease. Genetics labs rely on this every day: they look the variant up in a public frequency database, and a common variant is cleared as harmless.
@@ -48,28 +77,6 @@ One model, one fixed threshold, the same 183 test variants. All 183 are harmless
 - **Training across hospitals cost nothing.** The model trained with NVIDIA FLARE, where only 14 numbers per hospital travel, matched a model trained on all the data in one place. Over five runs the AUC was 0.9783 against 0.9784, and both left the same 2 false alarms.
 
 These are small numbers from a simulation. The section on limits below says what they can and cannot show. Full tables are in [docs/step3_results.md](docs/step3_results.md) and [docs/step4_results.md](docs/step4_results.md), and `uv run python scripts/03_check_results.py` reprints the numbers in the table above.
-
-## Try it: the patient query
-
-Pick a variant, and every hospital answers with counts. Two fixed rules read the answers. Nothing is generated and nothing is random.
-
-1. Common among healthy patients anywhere, at 0.1% or more: likely harmless.
-2. Common, yet at least three times more frequent among the sick: keep it flagged.
-
-![The patient query on screen: a variant picker, the reading from the patient's own hospital and from all three hospitals, and one chart with a row per source of evidence](docs/patient_query_tui.png?v=1)
-
-```
-uv run python scripts/06_query_tui.py                     # interactive, needs a real terminal
-uv run python scripts/06_query_variant.py "DSP N1526K"    # run once and print
-```
-
-| Try | What it shows |
-|---|---|
-| `DSP N1526K` | Oslo alone cannot clear it. Among healthy patients at Lagos 15% carry it, so it is likely harmless. |
-| `TTR V142I` | Common at Lagos, yet five times more common among the sick, so it stays flagged. It is a known cause of cardiac amyloidosis in people of African ancestry. |
-| `MYH7 R403Q` | Seen nowhere. Frequency says nothing, and the prediction scores have to decide. |
-
-Every bar in the chart is a frequency, and the tick marks 0.1%. A green bar past the tick clears the variant. A red bar well past the green one keeps it flagged. The last line on screen states what crossed hospital walls: one variant name out, counts back, and no patient record. For a patient at Oslo, asking the other two hospitals changes the reading for 492 of 8,682 variants.
 
 ## What is real and what is simulated
 
@@ -144,5 +151,4 @@ Team 12, clinical diagnostics track.
 - Mohit Panwar
 - Shreya Srivastava
 - Oumaima Boussouis
-- Fenfen Ge
 - Claude Code 😉
