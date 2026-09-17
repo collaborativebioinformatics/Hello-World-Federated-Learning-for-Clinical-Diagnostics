@@ -151,7 +151,7 @@ The seed is fixed, so everyone gets identical files, and step 2 ends by confirmi
 Team 12, clinical diagnostics track.
 
 - Yan Li
-- Mohit Panwar
+- Mohit B. Panwar
 - Shreya Srivastava
 - Oumaima Boussouis
 - Claude Code 😉
