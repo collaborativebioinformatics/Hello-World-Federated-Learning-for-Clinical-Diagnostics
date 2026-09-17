@@ -4,11 +4,11 @@
 
   TO UPDATE: each step below is one <div class="step ...">.
     class="step done"   green  built and tested
-    class="step next"   amber  designed, being built
+    class="step next"   amber  being built, or built and in review
     class="step todo"   grey   not started
   Change that one word, edit the text lines, change the date, then re-render:
 
-  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,800 --screenshot=docs/recipe_status.png docs/recipe_status.html
+  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,886 --screenshot=docs/recipe_status.png docs/recipe_status.html
 -->
 <html lang="en">
 <head>
@@ -45,7 +45,7 @@
 <p class="date">Updated 17 September 2026 · green steps run from a fresh clone with the commands shown</p>
 <div class="legend">
   <span><span class="dot" style="background:#3B6D11"></span>built and tested</span>
-  <span><span class="dot" style="background:#854F0B"></span>designed, being built</span>
+  <span><span class="dot" style="background:#854F0B"></span>being built or in review</span>
   <span><span class="dot" style="background:#888780"></span>not started</span>
 </div>
 
@@ -64,15 +64,17 @@
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step next"><div class="num">2</div><div class="body">
-  <span class="pill">next</span><p class="title">Hospital files</p>
-  <p class="line">held-out test set locked first · three sites of unequal size · per site: private verdicts and simulated patient counts</p>
-  <p class="line">will make <code>data/test/</code>, <code>data/site_oslo/</code>, <code>data/site_karachi/</code>, <code>data/site_lagos/</code>, <code>data/public_reference.csv</code></p>
+  <span class="pill">runs · in review, ML input wanted</span><p class="title">Hospital files</p>
+  <p class="line">test set 2,379 rows: a random fifth plus six unseen genes · verdicts: Oslo 4,057, Karachi 1,164, Lagos 1,190 · patient cohorts 20,000 / 4,000 / 4,000</p>
+  <p class="line">makes <code>data/test/</code>, <code>data/site_*/verdicts.csv</code> and <code>patient_counts.csv</code>, <code>data/public_reference.csv</code></p>
+  <p class="line">run <code>uv run python scripts/02_simulate_hospitals.py</code> · file and column rules in <code>docs/data_contract.md</code></p>
+  <p class="line">open questions on sampling and bias: <code>docs/step2_review.md</code> · known issue: the random test rows leak, trust the unseen-gene score</p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step todo"><div class="num">3</div><div class="body">
-  <span class="pill">ML side</span><p class="title">Local training</p>
-  <p class="line">each site fits a small classifier on its own verdicts, reading column names from <code>data/columns.json</code></p>
+<div class="step next"><div class="num">3</div><div class="body">
+  <span class="pill">next · ML side</span><p class="title">Local training</p>
+  <p class="line">each site fits a small classifier on its own <code>verdicts.csv</code>, reading column names from <code>data/columns.json</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 

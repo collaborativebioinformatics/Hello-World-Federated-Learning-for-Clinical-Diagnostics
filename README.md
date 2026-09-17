@@ -131,15 +131,24 @@ Join three public sources by variant. Every hospital will use exactly these colu
 
 ### Step 2. Lock a test set first, then split the rest into hospitals
 
-The held-out rows are set aside before anything else and are never trained on. The remaining rows are dealt out to three site folders. Same columns, different rows, and each site keeps only the AF column that matches its own population. Rows are sampled weighted by that population's real gnomAD frequencies, so each site looks like a hospital serving that population.
+The test set is locked before anything else and is never trained on. It is a random fifth of the variants, plus every variant of six whole genes that no hospital gets, so we can also ask whether the model works on a gene it has never seen.
 
-| `data/site_oslo` | | | | `data/site_karachi` | | | | `data/site_lagos` | | |
-|---|---|---|---|---|---|---|---|---|---|---|
-| variant | AF NFE | label | | variant | AF SAS | label | | variant | AF AFR | label |
-| R403Q | 0 | 1 | | R92W | 0 | 1 | | N1526K | .152 | 0 |
-| I3716V | .019 | 0 | | I3716V | .041 | 0 | | R403Q | 0 | 1 |
+The rest is dealt out to three hospitals of unequal size. A real hospital keeps two things private, and we imitate both:
 
-The same variant has the same scores and the same label everywhere. The only cell that differs per hospital is the frequency, because "how common is this" depends on whose patients you count.
+- **Its verdicts**, `verdicts.csv`: real ClinVar rows. Each variant goes to exactly one hospital, and a variant common in one population mostly lands at that population's hospital.
+- **Its patients**, `patient_counts.csv`: simulated cohorts drawn from the real gnomAD frequency of that hospital's population. For every variant: copies seen, overall and split by affected and unaffected.
+
+What every hospital already shares is a public frequency reference, `af_public`. Ours covers Europeans only. That is a deliberate pretence: it stands in for the many populations that real references miss, while gnomAD's real South Asian and African columns play the truth only the local hospital can see.
+
+| hospital | population | patients | verdicts | of which population-discordant |
+|---|---|---|---|---|
+| `site_oslo` | European | 20,000 | 4,057 | 81 |
+| `site_karachi` | South Asian | 4,000 | 1,164 | 111 |
+| `site_lagos` | African | 4,000 | 1,190 | 250 |
+
+Oslo is the big lab, yet the variants where population matters sit mostly at the two small ones.
+
+A hospital's file holds the scores, the verdict, `af_public`, and `af_local`, the frequency among its own unaffected patients. It holds none of gnomAD's per-population columns. Full details, and the rules on what may be trained on, are in [docs/data_contract.md](docs/data_contract.md).
 
 ### Step 3. Each hospital trains on its own rows
 
@@ -191,7 +200,7 @@ A patient of West African ancestry at Oslo carries `DSP N1526K` and has heart sy
 
 Summed: 28% of Lagos patients carry it, sick and healthy alike. Only counts travel, never a patient record. The counts are simulated to match the real gnomAD frequencies.
 
-Query response format per site: `variant_id, AC, AN, AC_affected, AN_affected, AC_unaffected, AN_unaffected`.
+Each site answers with one row of its `patient_counts.csv`: `variant_id, ac, an, ac_affected, an_affected, ac_unaffected, an_unaffected`.
 
 ### Step 7. Verdict and shortlist
 
@@ -297,7 +306,7 @@ Scores to avoid as inputs: ClinPred, BayesDel, REVEL, MetaLR and similar meta-pr
 
 ## 8. Build status and how to run
 
-![Recipe status: steps 0 and 1 are built and tested, step 2 is next, steps 3 to 7 are not started](docs/recipe_status.png)
+![Recipe status: steps 0 and 1 are built and tested, step 2 runs and is in review, steps 3 to 7 are not started](docs/recipe_status.png)
 
 Green means the step runs from a fresh clone with the command shown. To update the picture, open [docs/recipe_status.html](docs/recipe_status.html), change a step's one-word status (`todo`, `next` or `done`), and re-render with the command at the top of that file.
 
@@ -308,11 +317,14 @@ uv sync
 uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp (already committed)
 uv run python scripts/01_build_table.py             # step 1, about 4 minutes, then cached
 uv run python scripts/01_build_table.py --refresh   # re-download from myvariant.info
+uv run python scripts/02_simulate_hospitals.py      # step 2, a few seconds, same result every time
 ```
 
 **Step 1 is built.** It writes `data/variants.csv` and `data/columns.json`, the list of columns later steps should read instead of hard-coding. The table opens in Excel with the readable columns first: name, gene, verdict, stars, then the three site frequencies. Every column is explained in plain language in [docs/table_columns.md](docs/table_columns.md). `data/` is git-ignored because the upstream scores carry non-commercial terms, so we share the recipe and not the table.
 
-What came out on 17 September 2026:
+**Step 2 runs and is open for review.** The sampling choices were made on the data side, so before anyone trains on these files we want input from the ML side: [docs/step2_review.md](docs/step2_review.md) lists every choice and the concerns we already know about, including one to fix first (the random part of the test set leaks; trust the unseen-gene score until then). It locks the test set and writes each hospital's two private files. The seed is fixed, so the whole team works with the same hospitals, and the script ends by confirming that your build is identical to the team's reference in `config/reference_build.json`. The one thing that can break that is myvariant.info updating its data between two people's downloads; the script detects it and says what to do. [docs/data_contract.md](docs/data_contract.md) lists every file and column and says what may be trained on.
+
+What step 1 produced on 17 September 2026:
 
 | | |
 |---|---|
@@ -337,6 +349,8 @@ What the real data told us:
 
 - Real data is the signal. Simulated data is scaffolding (sites, patient). Never train on simulated labels.
 - Open data only: every source downloads without a login or registration.
+- Counts among unaffected patients are drawn from real population frequencies only and may be used as evidence. Counts among affected patients are generated from the verdict, so they are for the query demo and never a model input.
+- The public reference covers Europeans only, as a stand-in for populations real references miss. We say so wherever we show a result.
 - Any hand-edited "spiked" frequencies live only in the step 6 patient demo, never in the rows the AUC is computed on.
 - Goal B "same frequency, different effect" is shown as "the query supports it," not measured; we have no real carrier-outcome data.
 - If FedAvg blurs population differences, add per-population AF and the patient's population as input features (the population-aware column of the grid).
