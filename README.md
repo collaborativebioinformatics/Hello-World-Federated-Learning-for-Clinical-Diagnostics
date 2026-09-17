@@ -141,6 +141,7 @@ The seed is fixed, so everyone gets identical files, and step 2 ends by confirmi
 | [Manuscript.md](Manuscript.md) | the write-up with methods, results, limits and references, also as a [PDF](Manuscript.pdf) |
 | [docs/build_notes.md](docs/build_notes.md) | every step with example tables, the experiment grid, data sources, decisions, and how to update the pictures |
 | [docs/step3_results.md](docs/step3_results.md) | the model, every result table and how to read them |
+| [notebooks/federated_random_forest_colab.ipynb](notebooks/federated_random_forest_colab.ipynb) | Oumaima Boussouis's Colab notebook: a random forest per hospital with soft voting, on synthetic data |
 | [docs/step4_results.md](docs/step4_results.md) | federated training with NVIDIA FLARE: method, the five runs and their limits |
 | [docs/step2_review.md](docs/step2_review.md) | the sampling choices behind the simulated hospitals, and their review |
 | [docs/data_contract.md](docs/data_contract.md) | every file and column, and what may be trained on |
