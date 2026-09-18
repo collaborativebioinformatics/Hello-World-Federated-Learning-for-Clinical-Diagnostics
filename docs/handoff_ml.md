@@ -2,6 +2,16 @@
 
 Written 18 September 2026 for Yan, or for an agent working on Yan's side. It covers only what bears on training: the tables, the flag, the results and the open decisions. The patient query and its screen are Mohit's side and are left out. Every number here was computed from a build on that date; the docs named below hold the full tables.
 
+## Priority: the `all` table first
+
+Everything on the ML side should now be done on the all-panels table before anything else. It is the only table large enough for a statistic: 3,273 population-discordant benign test rows against 183 for heart and 100 for cancer. In order:
+
+1. Merge the branch `panel-flag`, so steps 2 to 4 take `--panel all`.
+2. Wait for the symbol fix to land on main (see "Known problems"), then build the table with `uv run python scripts/00_fetch_gene_panel.py --panel all` and `uv run python scripts/01_build_table.py --panel all`, about twelve minutes.
+3. Run step 2 with `--panel all --set-reference` and commit `config/reference_build_all.json`.
+4. Run step 3 and step 4 on `all`. Step 4 needs WSL or Linux. Report the false-alarm table by source of frequency evidence, and split it by the gene's inheritance class as in [disease_areas.md](disease_areas.md), because half of these genes need two bad copies.
+5. Only then look at the open decisions below. Cancer is already official and heart is done; neither needs more runs unless a change to the training code makes them stale.
+
 ## What is on main
 
 - **Steps 0 and 1 take `--panel`.** `cardiac` is the default and keeps writing `data/variants.csv` and `data/columns.json` with the same bytes as the team reference. Any other name reads `config/<panel>_gene_panel.txt` and writes `data/<panel>/`. Panel sets are listed in `config/panel_sets.json`. See [disease_areas.md](disease_areas.md).
@@ -31,7 +41,7 @@ Public reference to federated query: heart 5 removed and 0 introduced (p = 0.062
 
 ## Things for you to decide
 
-1. **Step 4 on `all`.** Step 3 on 123,454 rows took 45 seconds. NVFlare has not been tried on that table.
+1. **Step 4 on `all`.** Step 3 on 123,454 rows took 45 seconds. NVFlare has not been tried on that table; the five cancer runs took 320 seconds under WSL, and `all` has thirty times the rows.
 2. **The test split at scale.** `UNSEEN_GENES = 6` gives 927 of 25,509 test rows on `all`, 3.6%. On `cancer` the same six drew BRCA1 and the test set became 44.5% of the table.
 3. **A shared feature list.** The 30% missing rule recommends 13 scores for heart, 16 for cancer and 16 for `all`. The 13 heart columns are in every list, so the heart list would serve all three.
 4. **Two-copy genes.** Half of the `all` genes need two bad copies, and 92 of the 127 harmful population-discordant variants sit in them. The model could take a "needs two copies" input read from the panel file, or results can be reported per class; the per-class false-alarm table is in [disease_areas.md](disease_areas.md). The 0.1% line that marks `pop_discordant` in step 1 is wrong for those genes and was left alone so the heart table keeps its bytes.
