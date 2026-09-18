@@ -34,7 +34,58 @@ We built three disease areas from gene panels signed off by the NHS: the heart, 
 - **Overall accuracy did not move, and it cannot see any of this.** The usual summary score, AUC, stayed between 0.97 and 0.98 whatever the model was told and whichever hospital trained it. On the heart test set AlphaMissense alone reaches an AUC of 0.950, the gene name alone 0.916, and within single genes the scores still reach about 0.93 to 0.95, so the AUC reports how the expert verdicts were made, and the false alarms above are the measurement that needs the hospitals' counts.
 - **Oslo consulting only its own patients did about as well as the public database.** Karachi and Lagos on their own did no better. Each hospital improved once its own counts were added to the public database, so the gain comes from combining sources.
 
-The heart and inherited cancer runs are official, with five NVIDIA FLARE runs each in which the federated model, where only 14 numbers per hospital travel, matched a model trained on all the data in one place, 0.9783 against 0.9784 for the heart and 0.9776 against 0.9779 for inherited cancer, leaving the same false alarms in every run, while the all-panels numbers are a first look from steps 2 and 3 alone, without a federated run.
+The heart and inherited cancer runs are official, with five NVIDIA FLARE runs each in which the federated model, where only 14 numbers per hospital travel, matched a model trained on all the data in one place, 0.9783 against 0.9784 for the heart and 0.9776 against 0.9779 for inherited cancer, leaving the same false alarms in every run, while the all-panels numbers above are a first look from steps 2 and 3 alone. The federated arm that table was missing is below, split by clinical specialty.
+
+### Twelve clinical specialties, and what a hospital training alone costs
+
+Every panel gives enough genes to cut the table into twelve clinical specialties and run the whole
+comparison inside each one: cardiac, cancer, neurology, neuromuscular, metabolic, renal, eye,
+haematology, immunology, skeletal, skin and hearing. Three models per specialty, one trained at Oslo
+alone, one federated over the three hospitals and one on all the rows in one place. The patient this is
+about is the one whose ancestry the hospital rarely sees, a South Asian or African-ancestry patient who
+arrives at Oslo. All three models are told the same thing about frequency, so the only difference
+between them is how they were trained.
+
+![Two panels over twelve clinical specialties. Panel A, AUC on variants of South Asian or African ancestry patients seen at Oslo, has the three lines on top of each other in every specialty. Panel B, false alarms among population-discordant benign variants, separates them: Oslo training alone is above federated and pooled in ten of the twelve specialties and level in the other two, by about a third in neurology and metabolic disease](docs/disease_areas_figure.png?v=1)
+
+- **Federated training cost nothing in ranking, in any of the twelve.** The three lines in panel A sit
+  within 0.002 AUC of each other, and which one is on top changes from specialty to specialty.
+- **A hospital training alone cost false alarms.** Oslo alone was never better than federated, worse in
+  ten specialties and level in two, while federated and pooled agreed everywhere: 83 against 67 of 1,489
+  in neurology, 34 against 23 of 426 in metabolic disease, about a third more.
+- **Not paid for by missing disease.** The share of harmful variants caught was within 0.004 of
+  federated in every specialty, and higher for Oslo alone in nine of the twelve.
+- **Why a hospital alone learns a weaker rule.** Only 3% of Oslo's training variants are common in a
+  population other than its own, against 22% of Lagos's. Oslo sees few examples of "common and yet
+  harmless", so its frequency veto comes out weaker, −3.35 against −3.99 after averaging, and its
+  threshold was the stricter of the two. Federation lends it a rule its own patients cannot teach it.
+- **The AUC cannot see any of it**, which is the same lesson as the heart area one metric further on.
+  Frequency does not reorder variants, it vetoes a few near the threshold. Eight changed calls out of 426
+  move the fourth decimal of an AUC over 4,256 variants.
+
+The numbers behind the figure, averaged over three deals of the training variants, written by the script
+into [docs/disease_areas_table.md](docs/disease_areas_table.md). Specialties share genes, so their
+columns are not independent and the counts should not be added up.
+
+| Disease area | Genes | Test variants | Travelling variants | Travelling pathogenic | AUC, Oslo alone | AUC, federated | AUC, pooled | False alarms, Oslo alone | False alarms, federated | False alarms, pooled | Discordant benign |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| cardiac | 104 | 1,631 | 318 | 24 | 0.9634 (0.0005) | 0.9623 (0.0007) | 0.9625 (0.0002) | 2.0 | 2.0 | 2.0 | 122 |
+| cancer | 41 | 902 | 115 | 14 | 0.9668 (0.0014) | 0.9689 (0.0000) | 0.9675 (0.0000) | 4.3 | 4.0 | 4.0 | 50 |
+| neurology | 2160 | 14,278 | 3,793 | 347 | 0.9582 (0.0000) | 0.9576 (0.0000) | 0.9577 (0.0000) | 83.3 | 67.0 | 68.7 | 1,489 |
+| neuromuscular | 442 | 3,541 | 1,160 | 132 | 0.9648 (0.0000) | 0.9639 (0.0002) | 0.9639 (0.0001) | 19.7 | 14.3 | 14.3 | 474 |
+| metabolic | 795 | 4,256 | 1,109 | 274 | 0.9686 (0.0003) | 0.9695 (0.0001) | 0.9697 (0.0000) | 33.7 | 23.0 | 22.7 | 426 |
+| renal | 260 | 1,847 | 541 | 64 | 0.9571 (0.0006) | 0.9578 (0.0002) | 0.9580 (0.0001) | 9.7 | 6.0 | 6.7 | 279 |
+| eye | 595 | 4,845 | 1,406 | 150 | 0.9561 (0.0002) | 0.9561 (0.0002) | 0.9562 (0.0000) | 20.3 | 16.3 | 17.0 | 615 |
+| haematology | 243 | 1,529 | 350 | 34 | 0.9685 (0.0010) | 0.9702 (0.0005) | 0.9698 (0.0001) | 7.0 | 7.0 | 7.0 | 173 |
+| immunology | 378 | 2,067 | 697 | 43 | 0.9648 (0.0003) | 0.9645 (0.0002) | 0.9645 (0.0001) | 16.3 | 11.7 | 12.3 | 333 |
+| skeletal | 495 | 4,295 | 1,117 | 75 | 0.9484 (0.0005) | 0.9475 (0.0007) | 0.9477 (0.0001) | 10.3 | 9.0 | 9.7 | 471 |
+| skin | 281 | 2,545 | 612 | 55 | 0.9688 (0.0003) | 0.9688 (0.0002) | 0.9693 (0.0001) | 9.0 | 8.7 | 8.0 | 280 |
+| hearing | 165 | 1,753 | 535 | 46 | 0.9289 (0.0006) | 0.9293 (0.0003) | 0.9294 (0.0001) | 8.7 | 5.0 | 4.3 | 195 |
+
+This run used the all-panels table as it stood before the gene-alias pass, 123,454 variants rather than
+127,618, so its counts sit beside the all-panels numbers above rather than replacing them. Differences
+between specialties are not a specialty effect: each holds different variants, and only the comparison
+between the three models inside one specialty means anything.
 
 These are small numbers from a simulation, and the limits below say what they can and cannot show. Full tables: [docs/step3_results.md](docs/step3_results.md) and [docs/step4_results.md](docs/step4_results.md) for the heart, [docs/cancer_results.md](docs/cancer_results.md) for inherited cancer and [docs/disease_areas.md](docs/disease_areas.md) for every panel.
 
