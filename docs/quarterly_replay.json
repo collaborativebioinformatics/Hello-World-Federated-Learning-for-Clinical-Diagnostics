@@ -1,0 +1,1594 @@
+{
+ "note": {
+  "what": "A simulation replayed quarter by quarter. The three simulated hospitals of step 2 grow to their final cohorts and verdict piles in four equal steps; the step 3 model is retrained each quarter on the verdicts held so far and scored on the locked test set with that quarter's counts as evidence. No number here describes a real hospital.",
+  "sick_counts": "Counts among affected patients were generated from the verdict in step 2. They are demonstration only and are never fed to a model.",
+  "federated": "The pooled fit stands in for the federated model, because step 4 showed FedAvg lands on the pooled weights. NVFlare was not run for the quarters.",
+  "quarters": "Q4 is step 2's build, replayed byte for byte. Earlier quarters are nested sub-cohorts of it and prefixes of one fixed random order of each hospital's verdicts.",
+  "seed": 12,
+  "quarter_seed": 12,
+  "shares": {
+   "Q1": 0.25,
+   "Q2": 0.5,
+   "Q3": 0.75,
+   "Q4": 1.0
+  },
+  "evidence": {
+   "none": "no frequency column",
+   "public": "European-only public reference",
+   "own": "the patient's hospital alone, Oslo as in step 3",
+   "federated": "highest healthy-patient frequency any hospital reports",
+   "ceiling": "gnomAD's real per-population frequency, not allowed in real life"
+  },
+  "date": "2026-09-18",
+  "script": "scripts/05_quarterly_replay.py"
+ },
+ "areas": {
+  "cardiac": {
+   "title": "heart",
+   "folder": "data/quarterly/cardiac",
+   "variants": 8790,
+   "test_rows": 2373,
+   "unseen_genes": [
+    "CACNA1C",
+    "COL5A2",
+    "DMD",
+    "MYBPC3",
+    "TNNI3",
+    "TNNT2"
+   ],
+   "sites": [
+    {
+     "name": "site_oslo",
+     "population": "nfe",
+     "final_patients": 20000,
+     "final_verdicts": 4319
+    },
+    {
+     "name": "site_karachi",
+     "population": "sas",
+     "final_patients": 4000,
+     "final_verdicts": 1817
+    },
+    {
+     "name": "site_lagos",
+     "population": "afr",
+     "final_patients": 4000,
+     "final_verdicts": 1921
+    }
+   ],
+   "features": [
+    "alphamissense",
+    "cadd",
+    "dann",
+    "primateai",
+    "mpc",
+    "sift",
+    "sift4g",
+    "provean",
+    "phylop100",
+    "phastcons100",
+    "siphy29",
+    "bstatistic",
+    "log_frequency"
+   ],
+   "quarters": [
+    {
+     "quarter": "Q1",
+     "share": 0.25,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 5000,
+       "verdicts": 1080,
+       "pathogenic": 705,
+       "benign": 375,
+       "discordant": 24
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 1000,
+       "verdicts": 454,
+       "pathogenic": 286,
+       "benign": 168,
+       "discordant": 28
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 1000,
+       "verdicts": 480,
+       "pathogenic": 258,
+       "benign": 222,
+       "discordant": 67
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 1917,
+      "training_pathogenic": 1176,
+      "threshold": 0.5407,
+      "auc": {
+       "none": 0.9709,
+       "public": 0.9749,
+       "own": 0.9741,
+       "federated": 0.9763,
+       "ceiling": 0.9786
+      },
+      "auc_unseen_genes": {
+       "none": 0.966,
+       "public": 0.9692,
+       "own": 0.9681,
+       "federated": 0.9711,
+       "ceiling": 0.9741
+      },
+      "false_alarms": {
+       "none": 15,
+       "public": 9,
+       "own": 13,
+       "federated": 4,
+       "ceiling": 3
+      },
+      "discordant_rows": 183,
+      "sensitivity": {
+       "none": 0.921,
+       "public": 0.9227,
+       "own": 0.9227,
+       "federated": 0.9219,
+       "ceiling": 0.9219
+      },
+      "pathogenic_rows": 1152,
+      "paired": {
+       "public_to_federated": {
+        "removed": 5,
+        "introduced": 0,
+        "p": 0.0625
+       },
+       "own_to_federated": {
+        "removed": 9,
+        "introduced": 0,
+        "p": 0.0039
+       }
+      },
+      "frequency_weight": {
+       "pooled": -2.7383,
+       "per_site": {
+        "site_oslo": -2.2782,
+        "site_karachi": -2.4895,
+        "site_lagos": -3.3584
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 1080,
+       "auc": {
+        "none": 0.9708,
+        "public": 0.9743,
+        "own": 0.9735,
+        "federated": 0.9756,
+        "ceiling": 0.9775
+       },
+       "false_alarms": {
+        "none": 16,
+        "public": 13,
+        "own": 15,
+        "federated": 5,
+        "ceiling": 4
+       },
+       "sensitivity": {
+        "none": 0.9306,
+        "public": 0.9271,
+        "own": 0.9306,
+        "federated": 0.9306,
+        "ceiling": 0.9262
+       }
+      },
+      "site_karachi": {
+       "training_rows": 454,
+       "auc": {
+        "none": 0.9682,
+        "public": 0.9725,
+        "own": 0.9716,
+        "federated": 0.9738,
+        "ceiling": 0.976
+       },
+       "false_alarms": {
+        "none": 16,
+        "public": 8,
+        "own": 12,
+        "federated": 4,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9201,
+        "public": 0.9115,
+        "own": 0.9167,
+        "federated": 0.9158,
+        "ceiling": 0.9089
+       }
+      },
+      "site_lagos": {
+       "training_rows": 480,
+       "auc": {
+        "none": 0.9692,
+        "public": 0.9734,
+        "own": 0.9723,
+        "federated": 0.975,
+        "ceiling": 0.978
+       },
+       "false_alarms": {
+        "none": 11,
+        "public": 5,
+        "own": 8,
+        "federated": 3,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9071,
+        "public": 0.901,
+        "own": 0.9071,
+        "federated": 0.9062,
+        "ceiling": 0.8993
+       }
+      }
+     },
+     "query": {
+      "variants": 8682,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 306,
+       "site_karachi": 257,
+       "site_lagos": 82
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 653,
+       "KEEP FLAGGED": 6,
+       "FREQUENCY SAYS NOTHING": 8023
+      }
+     }
+    },
+    {
+     "quarter": "Q2",
+     "share": 0.5,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 10000,
+       "verdicts": 2160,
+       "pathogenic": 1384,
+       "benign": 776,
+       "discordant": 51
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 2000,
+       "verdicts": 908,
+       "pathogenic": 555,
+       "benign": 353,
+       "discordant": 63
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 2000,
+       "verdicts": 960,
+       "pathogenic": 530,
+       "benign": 430,
+       "discordant": 137
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 3594,
+      "training_pathogenic": 2157,
+      "threshold": 0.5807,
+      "auc": {
+       "none": 0.971,
+       "public": 0.9755,
+       "own": 0.9745,
+       "federated": 0.9772,
+       "ceiling": 0.9796
+      },
+      "auc_unseen_genes": {
+       "none": 0.9668,
+       "public": 0.9702,
+       "own": 0.9685,
+       "federated": 0.9722,
+       "ceiling": 0.9756
+      },
+      "false_alarms": {
+       "none": 13,
+       "public": 7,
+       "own": 10,
+       "federated": 3,
+       "ceiling": 3
+      },
+      "discordant_rows": 183,
+      "sensitivity": {
+       "none": 0.9193,
+       "public": 0.9158,
+       "own": 0.9184,
+       "federated": 0.9175,
+       "ceiling": 0.9141
+      },
+      "pathogenic_rows": 1152,
+      "paired": {
+       "public_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       },
+       "own_to_federated": {
+        "removed": 7,
+        "introduced": 0,
+        "p": 0.0156
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.2076,
+       "per_site": {
+        "site_oslo": -2.8331,
+        "site_karachi": -3.5838,
+        "site_lagos": -3.5651
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 2160,
+       "auc": {
+        "none": 0.9707,
+        "public": 0.9749,
+        "own": 0.974,
+        "federated": 0.9765,
+        "ceiling": 0.9786
+       },
+       "false_alarms": {
+        "none": 14,
+        "public": 8,
+        "own": 10,
+        "federated": 3,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.921,
+        "public": 0.9175,
+        "own": 0.9184,
+        "federated": 0.9184,
+        "ceiling": 0.9158
+       }
+      },
+      "site_karachi": {
+       "training_rows": 908,
+       "auc": {
+        "none": 0.9708,
+        "public": 0.975,
+        "own": 0.974,
+        "federated": 0.9769,
+        "ceiling": 0.9794
+       },
+       "false_alarms": {
+        "none": 15,
+        "public": 6,
+        "own": 9,
+        "federated": 3,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9271,
+        "public": 0.9149,
+        "own": 0.9201,
+        "federated": 0.9201,
+        "ceiling": 0.9106
+       }
+      },
+      "site_lagos": {
+       "training_rows": 960,
+       "auc": {
+        "none": 0.9701,
+        "public": 0.9746,
+        "own": 0.9735,
+        "federated": 0.9766,
+        "ceiling": 0.9792
+       },
+       "false_alarms": {
+        "none": 14,
+        "public": 6,
+        "own": 7,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.9106,
+        "public": 0.9054,
+        "own": 0.9071,
+        "federated": 0.9062,
+        "ceiling": 0.901
+       }
+      }
+     },
+     "query": {
+      "variants": 8682,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 430,
+       "site_karachi": 312,
+       "site_lagos": 136
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 769,
+       "KEEP FLAGGED": 7,
+       "FREQUENCY SAYS NOTHING": 7906
+      }
+     }
+    },
+    {
+     "quarter": "Q3",
+     "share": 0.75,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 15000,
+       "verdicts": 3239,
+       "pathogenic": 2103,
+       "benign": 1136,
+       "discordant": 78
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 3000,
+       "verdicts": 1363,
+       "pathogenic": 817,
+       "benign": 546,
+       "discordant": 90
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 3000,
+       "verdicts": 1441,
+       "pathogenic": 807,
+       "benign": 634,
+       "discordant": 192
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 5071,
+      "training_pathogenic": 3023,
+      "threshold": 0.5859,
+      "auc": {
+       "none": 0.9712,
+       "public": 0.976,
+       "own": 0.9751,
+       "federated": 0.9782,
+       "ceiling": 0.9804
+      },
+      "auc_unseen_genes": {
+       "none": 0.9667,
+       "public": 0.9708,
+       "own": 0.9689,
+       "federated": 0.9733,
+       "ceiling": 0.9766
+      },
+      "false_alarms": {
+       "none": 14,
+       "public": 7,
+       "own": 10,
+       "federated": 2,
+       "ceiling": 2
+      },
+      "discordant_rows": 183,
+      "sensitivity": {
+       "none": 0.921,
+       "public": 0.9167,
+       "own": 0.9184,
+       "federated": 0.9167,
+       "ceiling": 0.9141
+      },
+      "pathogenic_rows": 1152,
+      "paired": {
+       "public_to_federated": {
+        "removed": 5,
+        "introduced": 0,
+        "p": 0.0625
+       },
+       "own_to_federated": {
+        "removed": 8,
+        "introduced": 0,
+        "p": 0.0078
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.5439,
+       "per_site": {
+        "site_oslo": -3.2491,
+        "site_karachi": -3.627,
+        "site_lagos": -3.6172
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 3239,
+       "auc": {
+        "none": 0.971,
+        "public": 0.9758,
+        "own": 0.9749,
+        "federated": 0.9779,
+        "ceiling": 0.9799
+       },
+       "false_alarms": {
+        "none": 14,
+        "public": 8,
+        "own": 11,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.9219,
+        "public": 0.9201,
+        "own": 0.921,
+        "federated": 0.9201,
+        "ceiling": 0.9184
+       }
+      },
+      "site_karachi": {
+       "training_rows": 1363,
+       "auc": {
+        "none": 0.9708,
+        "public": 0.9754,
+        "own": 0.9746,
+        "federated": 0.9776,
+        "ceiling": 0.9798
+       },
+       "false_alarms": {
+        "none": 15,
+        "public": 6,
+        "own": 10,
+        "federated": 2,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9236,
+        "public": 0.9193,
+        "own": 0.9219,
+        "federated": 0.921,
+        "ceiling": 0.9158
+       }
+      },
+      "site_lagos": {
+       "training_rows": 1441,
+       "auc": {
+        "none": 0.97,
+        "public": 0.9748,
+        "own": 0.9738,
+        "federated": 0.9771,
+        "ceiling": 0.9794
+       },
+       "false_alarms": {
+        "none": 13,
+        "public": 6,
+        "own": 7,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.9106,
+        "public": 0.908,
+        "own": 0.9089,
+        "federated": 0.9071,
+        "ceiling": 0.9036
+       }
+      }
+     },
+     "query": {
+      "variants": 8682,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 450,
+       "site_karachi": 317,
+       "site_lagos": 135
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 785,
+       "KEEP FLAGGED": 5,
+       "FREQUENCY SAYS NOTHING": 7892
+      }
+     }
+    },
+    {
+     "quarter": "Q4",
+     "share": 1.0,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 20000,
+       "verdicts": 4319,
+       "pathogenic": 2811,
+       "benign": 1508,
+       "discordant": 95
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 4000,
+       "verdicts": 1817,
+       "pathogenic": 1102,
+       "benign": 715,
+       "discordant": 114
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 4000,
+       "verdicts": 1921,
+       "pathogenic": 1084,
+       "benign": 837,
+       "discordant": 259
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 6417,
+      "training_pathogenic": 3808,
+      "threshold": 0.5746,
+      "auc": {
+       "none": 0.971,
+       "public": 0.976,
+       "own": 0.9752,
+       "federated": 0.9784,
+       "ceiling": 0.9805
+      },
+      "auc_unseen_genes": {
+       "none": 0.9666,
+       "public": 0.9707,
+       "own": 0.9688,
+       "federated": 0.9736,
+       "ceiling": 0.9767
+      },
+      "false_alarms": {
+       "none": 15,
+       "public": 7,
+       "own": 11,
+       "federated": 2,
+       "ceiling": 2
+      },
+      "discordant_rows": 183,
+      "sensitivity": {
+       "none": 0.9219,
+       "public": 0.9193,
+       "own": 0.921,
+       "federated": 0.9193,
+       "ceiling": 0.9167
+      },
+      "pathogenic_rows": 1152,
+      "paired": {
+       "public_to_federated": {
+        "removed": 5,
+        "introduced": 0,
+        "p": 0.0625
+       },
+       "own_to_federated": {
+        "removed": 9,
+        "introduced": 0,
+        "p": 0.0039
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.7288,
+       "per_site": {
+        "site_oslo": -3.2577,
+        "site_karachi": -3.8029,
+        "site_lagos": -4.0877
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 4319,
+       "auc": {
+        "none": 0.9709,
+        "public": 0.9757,
+        "own": 0.9749,
+        "federated": 0.9779,
+        "ceiling": 0.9798
+       },
+       "false_alarms": {
+        "none": 16,
+        "public": 7,
+        "own": 11,
+        "federated": 2,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9236,
+        "public": 0.9193,
+        "own": 0.921,
+        "federated": 0.9201,
+        "ceiling": 0.9175
+       }
+      },
+      "site_karachi": {
+       "training_rows": 1817,
+       "auc": {
+        "none": 0.971,
+        "public": 0.9756,
+        "own": 0.9748,
+        "federated": 0.978,
+        "ceiling": 0.9801
+       },
+       "false_alarms": {
+        "none": 16,
+        "public": 7,
+        "own": 10,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.9253,
+        "public": 0.9201,
+        "own": 0.921,
+        "federated": 0.9193,
+        "ceiling": 0.9158
+       }
+      },
+      "site_lagos": {
+       "training_rows": 1921,
+       "auc": {
+        "none": 0.97,
+        "public": 0.9751,
+        "own": 0.9741,
+        "federated": 0.9776,
+        "ceiling": 0.9801
+       },
+       "false_alarms": {
+        "none": 14,
+        "public": 8,
+        "own": 11,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.9193,
+        "public": 0.9193,
+        "own": 0.921,
+        "federated": 0.9193,
+        "ceiling": 0.9167
+       }
+      }
+     },
+     "query": {
+      "variants": 8682,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 467,
+       "site_karachi": 324,
+       "site_lagos": 143
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 803,
+       "KEEP FLAGGED": 4,
+       "FREQUENCY SAYS NOTHING": 7875
+      }
+     }
+    }
+   ],
+   "q4_check": {
+    "files_identical": {
+     "site_oslo": true,
+     "site_karachi": true,
+     "site_lagos": true,
+     "test": true
+    },
+    "false_alarms_step3": {
+     "none": 15,
+     "public": 7,
+     "own": 11,
+     "federated": 2,
+     "ceiling": 2
+    },
+    "false_alarms_q4": {
+     "none": 15,
+     "public": 7,
+     "own": 11,
+     "federated": 2,
+     "ceiling": 2
+    },
+    "false_alarms_match": true,
+    "frequency_weight_step3": -3.7288,
+    "changed_calls_overview_today": {
+     "site_oslo": 467,
+     "site_karachi": 324,
+     "site_lagos": 143
+    },
+    "changed_calls_q4": {
+     "site_oslo": 467,
+     "site_karachi": 324,
+     "site_lagos": 143
+    },
+    "changed_calls_match": true
+   }
+  },
+  "cancer": {
+   "title": "inherited cancer",
+   "folder": "data/quarterly/cancer",
+   "variants": 4107,
+   "test_rows": 1829,
+   "unseen_genes": [
+    "ATM",
+    "BRCA1",
+    "MLH1",
+    "RET",
+    "SMAD4",
+    "VHL"
+   ],
+   "sites": [
+    {
+     "name": "site_oslo",
+     "population": "nfe",
+     "final_patients": 20000,
+     "final_verdicts": 1560
+    },
+    {
+     "name": "site_karachi",
+     "population": "sas",
+     "final_patients": 4000,
+     "final_verdicts": 667
+    },
+    {
+     "name": "site_lagos",
+     "population": "afr",
+     "final_patients": 4000,
+     "final_verdicts": 647
+    }
+   ],
+   "features": [
+    "alphamissense",
+    "cadd",
+    "dann",
+    "primateai",
+    "mpc",
+    "sift",
+    "sift4g",
+    "provean",
+    "phylop100",
+    "phastcons100",
+    "siphy29",
+    "bstatistic",
+    "esm1b",
+    "mutationassessor",
+    "gerp91",
+    "log_frequency"
+   ],
+   "quarters": [
+    {
+     "quarter": "Q1",
+     "share": 0.25,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 5000,
+       "verdicts": 390,
+       "pathogenic": 162,
+       "benign": 228,
+       "discordant": 11
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 1000,
+       "verdicts": 167,
+       "pathogenic": 55,
+       "benign": 112,
+       "discordant": 13
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 1000,
+       "verdicts": 162,
+       "pathogenic": 60,
+       "benign": 102,
+       "discordant": 27
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 683,
+      "training_pathogenic": 262,
+      "threshold": 0.4612,
+      "auc": {
+       "none": 0.9676,
+       "public": 0.9717,
+       "own": 0.9705,
+       "federated": 0.9734,
+       "ceiling": 0.9746
+      },
+      "auc_unseen_genes": {
+       "none": 0.964,
+       "public": 0.9698,
+       "own": 0.9683,
+       "federated": 0.9701,
+       "ceiling": 0.9708
+      },
+      "false_alarms": {
+       "none": 11,
+       "public": 6,
+       "own": 6,
+       "federated": 2,
+       "ceiling": 2
+      },
+      "discordant_rows": 100,
+      "sensitivity": {
+       "none": 0.8684,
+       "public": 0.8731,
+       "own": 0.8825,
+       "federated": 0.879,
+       "ceiling": 0.8672
+      },
+      "pathogenic_rows": 851,
+      "paired": {
+       "public_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       },
+       "own_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.3005,
+       "per_site": {
+        "site_oslo": -2.1762,
+        "site_karachi": -2.5094,
+        "site_lagos": -4.0356
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 390,
+       "auc": {
+        "none": 0.9661,
+        "public": 0.9699,
+        "own": 0.9689,
+        "federated": 0.9714,
+        "ceiling": 0.9723
+       },
+       "false_alarms": {
+        "none": 13,
+        "public": 9,
+        "own": 10,
+        "federated": 8,
+        "ceiling": 7
+       },
+       "sensitivity": {
+        "none": 0.8942,
+        "public": 0.9036,
+        "own": 0.9095,
+        "federated": 0.9072,
+        "ceiling": 0.9013
+       }
+      },
+      "site_karachi": {
+       "training_rows": 167,
+       "auc": {
+        "none": 0.9657,
+        "public": 0.9692,
+        "own": 0.968,
+        "federated": 0.9706,
+        "ceiling": 0.9719
+       },
+       "false_alarms": {
+        "none": 8,
+        "public": 6,
+        "own": 6,
+        "federated": 3,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.7004,
+        "public": 0.7286,
+        "own": 0.7297,
+        "federated": 0.7286,
+        "ceiling": 0.725
+       }
+      },
+      "site_lagos": {
+       "training_rows": 162,
+       "auc": {
+        "none": 0.962,
+        "public": 0.9655,
+        "own": 0.9649,
+        "federated": 0.967,
+        "ceiling": 0.9676
+       },
+       "false_alarms": {
+        "none": 8,
+        "public": 4,
+        "own": 5,
+        "federated": 1,
+        "ceiling": 1
+       },
+       "sensitivity": {
+        "none": 0.8214,
+        "public": 0.8179,
+        "own": 0.8261,
+        "federated": 0.8237,
+        "ceiling": 0.8143
+       }
+      }
+     },
+     "query": {
+      "variants": 4007,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 151,
+       "site_karachi": 132,
+       "site_lagos": 36
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 311,
+       "KEEP FLAGGED": 3,
+       "FREQUENCY SAYS NOTHING": 3693
+      }
+     }
+    },
+    {
+     "quarter": "Q2",
+     "share": 0.5,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 10000,
+       "verdicts": 780,
+       "pathogenic": 335,
+       "benign": 445,
+       "discordant": 23
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 2000,
+       "verdicts": 334,
+       "pathogenic": 115,
+       "benign": 219,
+       "discordant": 25
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 2000,
+       "verdicts": 324,
+       "pathogenic": 124,
+       "benign": 200,
+       "discordant": 48
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 1296,
+      "training_pathogenic": 512,
+      "threshold": 0.478,
+      "auc": {
+       "none": 0.9697,
+       "public": 0.9741,
+       "own": 0.9735,
+       "federated": 0.9762,
+       "ceiling": 0.9768
+      },
+      "auc_unseen_genes": {
+       "none": 0.9665,
+       "public": 0.9725,
+       "own": 0.9713,
+       "federated": 0.9732,
+       "ceiling": 0.9734
+      },
+      "false_alarms": {
+       "none": 11,
+       "public": 6,
+       "own": 6,
+       "federated": 2,
+       "ceiling": 2
+      },
+      "discordant_rows": 100,
+      "sensitivity": {
+       "none": 0.8907,
+       "public": 0.886,
+       "own": 0.8942,
+       "federated": 0.8907,
+       "ceiling": 0.879
+      },
+      "pathogenic_rows": 851,
+      "paired": {
+       "public_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       },
+       "own_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.2888,
+       "per_site": {
+        "site_oslo": -2.5713,
+        "site_karachi": -3.0584,
+        "site_lagos": -3.5948
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 780,
+       "auc": {
+        "none": 0.9695,
+        "public": 0.9736,
+        "own": 0.9731,
+        "federated": 0.9756,
+        "ceiling": 0.9761
+       },
+       "false_alarms": {
+        "none": 11,
+        "public": 8,
+        "own": 9,
+        "federated": 6,
+        "ceiling": 6
+       },
+       "sensitivity": {
+        "none": 0.8837,
+        "public": 0.8931,
+        "own": 0.8978,
+        "federated": 0.8942,
+        "ceiling": 0.8884
+       }
+      },
+      "site_karachi": {
+       "training_rows": 334,
+       "auc": {
+        "none": 0.9654,
+        "public": 0.9704,
+        "own": 0.9697,
+        "federated": 0.9727,
+        "ceiling": 0.9735
+       },
+       "false_alarms": {
+        "none": 10,
+        "public": 6,
+        "own": 6,
+        "federated": 5,
+        "ceiling": 5
+       },
+       "sensitivity": {
+        "none": 0.8437,
+        "public": 0.8519,
+        "own": 0.8555,
+        "federated": 0.8531,
+        "ceiling": 0.8461
+       }
+      },
+      "site_lagos": {
+       "training_rows": 324,
+       "auc": {
+        "none": 0.9674,
+        "public": 0.9707,
+        "own": 0.9706,
+        "federated": 0.9726,
+        "ceiling": 0.9726
+       },
+       "false_alarms": {
+        "none": 8,
+        "public": 4,
+        "own": 4,
+        "federated": 1,
+        "ceiling": 1
+       },
+       "sensitivity": {
+        "none": 0.8437,
+        "public": 0.832,
+        "own": 0.8414,
+        "federated": 0.839,
+        "ceiling": 0.8284
+       }
+      }
+     },
+     "query": {
+      "variants": 4007,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 192,
+       "site_karachi": 152,
+       "site_lagos": 51
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 348,
+       "KEEP FLAGGED": 6,
+       "FREQUENCY SAYS NOTHING": 3653
+      }
+     }
+    },
+    {
+     "quarter": "Q3",
+     "share": 0.75,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 15000,
+       "verdicts": 1170,
+       "pathogenic": 500,
+       "benign": 670,
+       "discordant": 30
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 3000,
+       "verdicts": 500,
+       "pathogenic": 182,
+       "benign": 318,
+       "discordant": 33
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 3000,
+       "verdicts": 485,
+       "pathogenic": 177,
+       "benign": 308,
+       "discordant": 69
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 1820,
+      "training_pathogenic": 711,
+      "threshold": 0.4083,
+      "auc": {
+       "none": 0.9708,
+       "public": 0.975,
+       "own": 0.9751,
+       "federated": 0.9772,
+       "ceiling": 0.9774
+      },
+      "auc_unseen_genes": {
+       "none": 0.9671,
+       "public": 0.9727,
+       "own": 0.9724,
+       "federated": 0.9737,
+       "ceiling": 0.9736
+      },
+      "false_alarms": {
+       "none": 13,
+       "public": 8,
+       "own": 9,
+       "federated": 4,
+       "ceiling": 4
+      },
+      "discordant_rows": 100,
+      "sensitivity": {
+       "none": 0.9201,
+       "public": 0.9154,
+       "own": 0.9201,
+       "federated": 0.9166,
+       "ceiling": 0.913
+      },
+      "pathogenic_rows": 851,
+      "paired": {
+       "public_to_federated": {
+        "removed": 4,
+        "introduced": 0,
+        "p": 0.125
+       },
+       "own_to_federated": {
+        "removed": 5,
+        "introduced": 0,
+        "p": 0.0625
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.1273,
+       "per_site": {
+        "site_oslo": -2.4433,
+        "site_karachi": -2.8749,
+        "site_lagos": -3.3665
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 1170,
+       "auc": {
+        "none": 0.9701,
+        "public": 0.9738,
+        "own": 0.9739,
+        "federated": 0.976,
+        "ceiling": 0.976
+       },
+       "false_alarms": {
+        "none": 12,
+        "public": 8,
+        "own": 9,
+        "federated": 5,
+        "ceiling": 5
+       },
+       "sensitivity": {
+        "none": 0.9083,
+        "public": 0.9036,
+        "own": 0.9072,
+        "federated": 0.9036,
+        "ceiling": 0.9001
+       }
+      },
+      "site_karachi": {
+       "training_rows": 500,
+       "auc": {
+        "none": 0.969,
+        "public": 0.9738,
+        "own": 0.9739,
+        "federated": 0.9762,
+        "ceiling": 0.9763
+       },
+       "false_alarms": {
+        "none": 10,
+        "public": 7,
+        "own": 7,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.8743,
+        "public": 0.9072,
+        "own": 0.9107,
+        "federated": 0.906,
+        "ceiling": 0.9036
+       }
+      },
+      "site_lagos": {
+       "training_rows": 485,
+       "auc": {
+        "none": 0.9696,
+        "public": 0.973,
+        "own": 0.9732,
+        "federated": 0.9751,
+        "ceiling": 0.9752
+       },
+       "false_alarms": {
+        "none": 8,
+        "public": 4,
+        "own": 4,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.839,
+        "public": 0.8555,
+        "own": 0.8602,
+        "federated": 0.8566,
+        "ceiling": 0.8519
+       }
+      }
+     },
+     "query": {
+      "variants": 4007,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 204,
+       "site_karachi": 151,
+       "site_lagos": 54
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 357,
+       "KEEP FLAGGED": 4,
+       "FREQUENCY SAYS NOTHING": 3646
+      }
+     }
+    },
+    {
+     "quarter": "Q4",
+     "share": 1.0,
+     "per_site": {
+      "site_oslo": {
+       "population": "nfe",
+       "patients": 20000,
+       "verdicts": 1560,
+       "pathogenic": 647,
+       "benign": 913,
+       "discordant": 43
+      },
+      "site_karachi": {
+       "population": "sas",
+       "patients": 4000,
+       "verdicts": 667,
+       "pathogenic": 250,
+       "benign": 417,
+       "discordant": 38
+      },
+      "site_lagos": {
+       "population": "afr",
+       "patients": 4000,
+       "verdicts": 647,
+       "pathogenic": 231,
+       "benign": 416,
+       "discordant": 98
+      }
+     },
+     "model": {
+      "stands_in_for": "federated",
+      "training_rows": 2278,
+      "training_pathogenic": 870,
+      "threshold": 0.4111,
+      "auc": {
+       "none": 0.9711,
+       "public": 0.9754,
+       "own": 0.9754,
+       "federated": 0.9778,
+       "ceiling": 0.9778
+      },
+      "auc_unseen_genes": {
+       "none": 0.9681,
+       "public": 0.9737,
+       "own": 0.9733,
+       "federated": 0.9748,
+       "ceiling": 0.9746
+      },
+      "false_alarms": {
+       "none": 12,
+       "public": 8,
+       "own": 9,
+       "federated": 3,
+       "ceiling": 3
+      },
+      "discordant_rows": 100,
+      "sensitivity": {
+       "none": 0.9119,
+       "public": 0.9119,
+       "own": 0.913,
+       "federated": 0.9107,
+       "ceiling": 0.9072
+      },
+      "pathogenic_rows": 851,
+      "paired": {
+       "public_to_federated": {
+        "removed": 5,
+        "introduced": 0,
+        "p": 0.0625
+       },
+       "own_to_federated": {
+        "removed": 6,
+        "introduced": 0,
+        "p": 0.0312
+       }
+      },
+      "frequency_weight": {
+       "pooled": -3.1334,
+       "per_site": {
+        "site_oslo": -2.6988,
+        "site_karachi": -2.7988,
+        "site_lagos": -3.2122
+       }
+      }
+     },
+     "single_site_models": {
+      "site_oslo": {
+       "training_rows": 1560,
+       "auc": {
+        "none": 0.9706,
+        "public": 0.9747,
+        "own": 0.9747,
+        "federated": 0.977,
+        "ceiling": 0.9769
+       },
+       "false_alarms": {
+        "none": 11,
+        "public": 8,
+        "own": 8,
+        "federated": 3,
+        "ceiling": 3
+       },
+       "sensitivity": {
+        "none": 0.9048,
+        "public": 0.9013,
+        "own": 0.9025,
+        "federated": 0.9001,
+        "ceiling": 0.8966
+       }
+      },
+      "site_karachi": {
+       "training_rows": 667,
+       "auc": {
+        "none": 0.9708,
+        "public": 0.9753,
+        "own": 0.9753,
+        "federated": 0.9778,
+        "ceiling": 0.9777
+       },
+       "false_alarms": {
+        "none": 12,
+        "public": 8,
+        "own": 8,
+        "federated": 5,
+        "ceiling": 5
+       },
+       "sensitivity": {
+        "none": 0.8978,
+        "public": 0.9048,
+        "own": 0.906,
+        "federated": 0.9025,
+        "ceiling": 0.9001
+       }
+      },
+      "site_lagos": {
+       "training_rows": 647,
+       "auc": {
+        "none": 0.9699,
+        "public": 0.9734,
+        "own": 0.9734,
+        "federated": 0.9757,
+        "ceiling": 0.9757
+       },
+       "false_alarms": {
+        "none": 9,
+        "public": 5,
+        "own": 5,
+        "federated": 2,
+        "ceiling": 2
+       },
+       "sensitivity": {
+        "none": 0.8472,
+        "public": 0.8578,
+        "own": 0.8613,
+        "federated": 0.8566,
+        "ceiling": 0.8531
+       }
+      }
+     },
+     "query": {
+      "variants": 4007,
+      "min_count": 5,
+      "changed_calls_per_site": {
+       "site_oslo": 209,
+       "site_karachi": 152,
+       "site_lagos": 56
+      },
+      "calls_after_all_answer": {
+       "LIKELY HARMLESS": 363,
+       "KEEP FLAGGED": 3,
+       "FREQUENCY SAYS NOTHING": 3641
+      }
+     }
+    }
+   ],
+   "q4_check": {
+    "files_identical": {
+     "site_oslo": true,
+     "site_karachi": true,
+     "site_lagos": true,
+     "test": true
+    },
+    "false_alarms_step3": {
+     "none": 12,
+     "public": 8,
+     "own": 9,
+     "federated": 3,
+     "ceiling": 3
+    },
+    "false_alarms_q4": {
+     "none": 12,
+     "public": 8,
+     "own": 9,
+     "federated": 3,
+     "ceiling": 3
+    },
+    "false_alarms_match": true,
+    "frequency_weight_step3": -3.1334,
+    "changed_calls_overview_today": {
+     "site_oslo": 209,
+     "site_karachi": 152,
+     "site_lagos": 56
+    },
+    "changed_calls_q4": {
+     "site_oslo": 209,
+     "site_karachi": 152,
+     "site_lagos": 56
+    },
+    "changed_calls_match": true
+   }
+  }
+ }
+}
