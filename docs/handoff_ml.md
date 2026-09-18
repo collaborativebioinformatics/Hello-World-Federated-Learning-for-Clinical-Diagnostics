@@ -48,6 +48,11 @@ Public reference to federated query: heart 5 removed and 0 introduced (p = 0.062
 5. **Other mutation types in the model.** If wanted: one starting point per mutation type, the 13 scores applied to missense only, and one frequency weight shared by all types, then a check that the shared weight matches the missense-only fit. The labels outside missense are 99% one class, so AUC would mislead there; report false alarms and wrongly cleared harmful variants instead.
 6. **Heart wording hard-coded in your scripts.** "heart patients" in step 2, "12 scores" and "Fourteen numbers" in step 3's prose, the `DSP N1526K` example, "4,300 rows" and the two-thirds `none` sentence in step 4, "14 floats" in the client. None stops a run; all mislead on another panel. The branch fixed the two that were computed counts.
 
+## Two options on the NVFlare side, if time allows
+
+- **POC mode.** NVFlare can run its real runtime on one machine: one server process and three client processes, each with its own startup kit and data folder, with jobs submitted as in production. The existing FedAvg job should run there unchanged. It is the strongest thing to show a judge: three hospital processes, a server, a job, no simulator.
+- **The count query as a federated statistics job.** NVFlare's federated statistics workflow computes counts on each client and returns only the aggregate, with a minimum-count rule. The patient query's "how many of your patients carry this" could run through it, so counts go up the same runtime that sends models down. The query's spelling fix and per-gene line would sit at the client boundary.
+
 ## Known problems
 
 - **Step 4 does not run on Windows.** NVFlare 2.9.0 calls `os.setsid` when it launches a job. It runs under WSL Ubuntu from the same checkout with `uv run --frozen`; the five cancer runs took 320 seconds there.
