@@ -6,7 +6,7 @@ Written 18 September 2026 for Yan, or for an agent working on Yan's side. It cov
 
 Everything on the ML side should now be done on the all-panels table before anything else. It is the only table large enough for a statistic: 3,273 population-discordant benign test rows against 183 for heart and 100 for cancer. In order:
 
-1. Merge the branch `panel-flag`, so steps 2 to 4 take `--panel all`.
+1. The branch `panel-flag` is merged into main, so steps 2 to 4 take `--panel all` already.
 2. Build the table with `uv run python scripts/00_fetch_gene_panel.py --panel all` and `uv run python scripts/01_build_table.py --panel all`, about twelve minutes.
 3. Run step 2 with `--panel all --set-reference` and commit `config/reference_build_all.json`.
 4. Run step 3 and step 4 on `all`. Step 4 needs WSL or Linux. Report the false-alarm table by source of frequency evidence, and split it by the gene's inheritance class as in [disease_areas.md](disease_areas.md), because half of these genes need two bad copies.
@@ -19,9 +19,9 @@ Everything on the ML side should now be done on the all-panels table before anyt
 - **Each gene's mode of inheritance is recorded** in the comment of its line in the panel file: `GENE  # panels | MONOALLELIC; BIALLELIC`. Nothing on the ML side reads it yet.
 - **A table of every other small mutation exists**, `data/other_types/`, in the same layout as `data/`, 73,570 rows. It serves the patient query, which is Mohit's side. Nothing trains on it today; see point 5 below if that should change. The counts measured there: outside missense the mutation type alone matches the ClinVar label about 99% of the time. See [other_mutation_types.md](other_mutation_types.md).
 
-## What is on the branch `panel-flag`, for you to review and merge
+## The panel flag for steps 2 to 4, merged into main on 18 September
 
-The branch gives `scripts/02_simulate_hospitals.py`, `03_train_local.py`, `03_check_results.py` and `04_federated_train.py` a `--panel` flag, following the same rule as step 1: `data/` for `cardiac`, `data/<panel>/` otherwise. Step 2 keeps one reference file per panel, `config/reference_build_<panel>.json`; the cancer one is on the branch. The heart outputs were checked byte for byte with no flag, and the branch merges cleanly onto main. Details and the diff notes are in the branch's [data_contract.md](data_contract.md) section "A second disease area" and in [cancer_results.md](cancer_results.md).
+The branch `panel-flag` gave `scripts/02_simulate_hospitals.py`, `03_train_local.py`, `03_check_results.py` and `04_federated_train.py` a `--panel` flag, following the same rule as step 1: `data/` for `cardiac`, `data/<panel>/` otherwise. Step 2 keeps one reference file per panel, `config/reference_build_<panel>.json`; the cancer one is on the branch. The heart outputs were checked byte for byte with no flag, and the branch merges cleanly onto main. Details and the diff notes are in the branch's [data_contract.md](data_contract.md) section "A second disease area" and in [cancer_results.md](cancer_results.md).
 
 Design note for the review: `main()` in steps 2 and 4 sets the module-level `DATA_DIR` with `global`, and the check script and step 4 set `step3.DATA_DIR` because step 3's `load()` and `evidence_columns()` read that global. Threading a parameter through would be cleaner and a larger diff.
 
