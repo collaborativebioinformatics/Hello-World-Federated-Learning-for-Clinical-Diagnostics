@@ -1,6 +1,6 @@
-**[Try it in your browser](https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/)**: the patient query, the pipeline in motion and the manuscript as one website. The query opens first, and it is the same screen as the terminal one below.
+**[Try it in your browser](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/)**: the patient query, the pipeline in motion and the manuscript as one website. The query opens first, and it is the same screen as the terminal one below.
 
-[![The pipeline in motion: data comes in, hospitals train together, a quarter passes, a doctor asks](docs/pipeline_live/pipeline.gif?v=1)](https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/#pipeline)
+[![The pipeline in motion: data comes in, hospitals train together, a quarter passes, a doctor asks](docs/pipeline_live/pipeline.gif?v=1)](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/#pipeline)
 
 > This is a research prototype from a hackathon. The hospitals and their patients are simulated. It must not be used for patient care.
 
@@ -148,7 +148,7 @@ Expert verdicts come from ClinVar, computer predictions of damage from dbNSFP an
 
 ## Read more
 
-- [The website](https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/): the [patient query in the browser](https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/), the pipeline in motion and the manuscript as tabs of one page.
+- [The website](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/): the [patient query in the browser](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/demo/), the pipeline in motion and the manuscript as tabs of one page.
 - [The manuscript as a PDF](Manuscript.pdf), written in [Manuscript.md](Manuscript.md): methods, results, limits and references.
 - [docs/team_section_shared_manuscript.md](docs/team_section_shared_manuscript.md): the condensed story, Team 12's blocks for the shared hackathon manuscript.
 - [docs/patient_query.md](docs/patient_query.md): what the clinician's screen shows, how every line on it is computed, the per-gene line, the model line and its proof.
