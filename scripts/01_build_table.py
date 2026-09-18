@@ -16,10 +16,23 @@ one-gene query would write, by the gene symbols ClinVar gives each record.
 Everything after the download reads the per-gene files, so the table comes out
 the same either way. --chunk 1 asks one gene at a time, as the script did first.
 
+A gene can answer nothing because myvariant.info knows it by another name.
+HGNC renames genes, so the panel says AARS where ClinVar says AARS1. And where
+two genes overlap, ClinVar's index names only the first, so the variants of HBB
+sit under LOC106099062 and those of GLA under RPL36A-HNRNPH2, while dbNSFP names
+the gene itself. A panel set with `resolve_symbols` in config/panel_sets.json
+asks a second time for every gene that answered nothing: under the panel's
+symbol, HGNC's current symbol and HGNC's previous symbols, in ClinVar's gene
+field and in dbNSFP's. The gene keeps the panel's symbol in the table. The
+second answer is cached apart from the first, so the other panel sets, which do
+not carry the flag, read exactly what they read before.
+
 Writes into data/ (git-ignored):
-    variants.csv    one row per variant, the readable columns first
-    columns.json    which columns are features, frequencies and label
-    raw/GENE.json   cached downloads, so reruns are instant. Shared by every panel
+    variants.csv             one row per variant, the readable columns first
+    columns.json             which columns are features, frequencies and label
+    raw/GENE.json            cached downloads, so reruns are instant. Shared by every panel
+    raw_hgnc/GENE.json       what HGNC says a gene is called, for the second try
+    raw_other_names/GENE.json  the second try's answer, for genes whose own symbol found nothing
 
 Usage:
     uv run python scripts/01_build_table.py
@@ -42,6 +55,7 @@ import re
 import sys
 import time
 from collections import Counter
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -49,13 +63,19 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
+PANEL_SETS = CONFIG_DIR / "panel_sets.json"
 DATA_DIR = ROOT / "data"
 CACHE_DIR = DATA_DIR / "raw"
+HGNC_CACHE_DIR = DATA_DIR / "raw_hgnc"
+OTHER_NAMES_CACHE_DIR = DATA_DIR / "raw_other_names"
 DEFAULT_PANEL = "cardiac"
 
 API_URL = "https://myvariant.info/v1/query"
 GENOME_BUILD = "hg38"
 DEFAULT_CHUNK = 50  # genes per download query
+
+HGNC_URL = "https://rest.genenames.org/fetch/{field}/{value}"
+HGNC_PAUSE = 0.2  # seconds between HGNC requests. HGNC asks for no more than ten a second
 
 # Score columns: our column name -> where the value sits in the API record.
 #
@@ -280,18 +300,22 @@ def fields_to_request() -> str:
     return ",".join(clinvar + amino_acids + list(SCORES.values()) + frequencies)
 
 
-def gene_query(genes: list[str]) -> str:
+def gene_query(genes: list[str], other_names: bool = False) -> str:
     """The query for one gene, or for several genes at once.
 
     Missense only: AlphaMissense exists only for missense variants.
     The pathogenic/benign filter just keeps the download small;
     the real decision is made locally in clinvar_verdict().
+
+    With `other_names` the list holds every name the genes go by, and a record
+    counts when ClinVar or dbNSFP names the gene. That is the second try for
+    genes whose own symbol found nothing, see names_of().
     """
     symbols = genes[0] if len(genes) == 1 else "(" + " OR ".join(genes) + ")"
-    return (
-        f"clinvar.gene.symbol:{symbols} AND _exists_:dbnsfp.alphamissense "
-        "AND clinvar.rcv.clinical_significance:(pathogenic OR benign)"
-    )
+    where = f"clinvar.gene.symbol:{symbols}"
+    if other_names:
+        where = f"({where} OR dbnsfp.genename:{symbols})"
+    return f"{where} AND _exists_:dbnsfp.alphamissense AND clinvar.rcv.clinical_significance:(pathogenic OR benign)"
 
 
 def fetch_records(query: str, fields: str) -> list[dict]:
@@ -317,7 +341,28 @@ def download_gene(gene: str, refresh: bool) -> list[dict]:
     return records
 
 
-def download_in_chunks(genes: list[str], chunk: int, refresh: bool) -> None:
+def download_under_other_names(gene: str, refresh: bool, taken: frozenset[str] = frozenset()) -> list[dict]:
+    """The second try for a gene whose own symbol found nothing: every name it goes by, in ClinVar's gene field and dbNSFP's.
+
+    Cached in data/raw_other_names/, apart from data/raw/, so a panel set without
+    `resolve_symbols` never sees these records. The records keep the two gene
+    fields, which say under which name each one was found. `taken` holds the
+    symbols of the other genes on the list, which names_of() leaves out.
+    """
+    cache_file = OTHER_NAMES_CACHE_DIR / f"{gene}.json"
+    if cache_file.exists() and not refresh:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    records = fetch_records(gene_query(names_of(gene, taken), other_names=True), fields_for_other_names())
+    OTHER_NAMES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(records), encoding="utf-8")
+    return records
+
+
+def fields_for_other_names() -> str:
+    return fields_to_request() + ",clinvar.gene.symbol,dbnsfp.genename"
+
+
+def download_in_chunks(genes: list[str], chunk: int, refresh: bool, other_names: bool = False, taken: frozenset[str] = frozenset()) -> None:
     """Fill the cache for the genes that are not in it yet, several genes per query.
 
     One query for up to `chunk` genes returns the same records as one query per
@@ -325,32 +370,51 @@ def download_in_chunks(genes: list[str], chunk: int, refresh: bool) -> None:
     is dealt out into the per-gene files download_gene() would have written, one
     per gene asked for, empty when nothing came back. A record that names two
     of the genes asked for goes into both files, as it would with two queries.
+
+    With `other_names` this is the second try of download_under_other_names(),
+    for several genes at once: every name of every gene goes into the query,
+    and a record is dealt to the gene whose name ClinVar or dbNSFP gives it.
     """
-    missing = [gene for gene in genes if refresh or not (CACHE_DIR / f"{gene}.json").exists()]
+    cache_dir = OTHER_NAMES_CACHE_DIR if other_names else CACHE_DIR
+    missing = [gene for gene in genes if refresh or not (cache_dir / f"{gene}.json").exists()]
     if not missing:
         return
-    fields = fields_to_request() + ",clinvar.gene.symbol"  # only to deal the records out
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    fields = fields_for_other_names() if other_names else fields_to_request() + ",clinvar.gene.symbol"
     batches = [missing[start : start + chunk] for start in range(0, len(missing), chunk)]
-    print(f"downloading {len(missing)} genes in {len(batches)} queries of up to {chunk} genes each", flush=True)
+    what = "genes under their other names" if other_names else "genes"
+    print(f"downloading {len(missing)} {what} in {len(batches)} queries of up to {chunk} genes each", flush=True)
     for number, batch in enumerate(batches, 1):
         started = time.time()
-        records = fetch_records(gene_query(batch), fields)
-        by_gene = split_by_gene(records, batch)
+        names = {gene: names_of(gene, taken) if other_names else [gene] for gene in batch}
+        records = fetch_records(gene_query([name for gene in batch for name in names[gene]], other_names), fields)
+        by_gene = split_by_gene(records, names, other_names)
         for gene in batch:
-            (CACHE_DIR / f"{gene}.json").write_text(json.dumps(by_gene[gene]), encoding="utf-8")
+            (cache_dir / f"{gene}.json").write_text(json.dumps(by_gene[gene]), encoding="utf-8")
         print(f"  query {number:>3}/{len(batches)}  {len(batch):>3} genes  {len(records):>6} records  {time.time() - started:5.1f} s", flush=True)
 
 
-def split_by_gene(records: list[dict], genes: list[str]) -> dict[str, list[dict]]:
-    """Deal the records of a many-gene query out by gene, then drop the gene field that was only asked for to do this."""
-    wanted = {gene.upper(): gene for gene in genes}
-    by_gene: dict[str, list[dict]] = {gene: [] for gene in genes}
+def split_by_gene(records: list[dict], names: dict[str, list[str]], other_names: bool = False) -> dict[str, list[dict]]:
+    """Deal the records of a many-gene query out by gene: `names` maps each gene to the names it was asked for under.
+
+    For the plain query the gene field was only asked for to do this, and is
+    dropped so the file matches what a one-gene query writes. The second try
+    keeps it, together with dbNSFP's gene name, which it also matches on.
+    """
+    wanted: dict[str, list[str]] = {}  # a name, in capitals -> the genes that go by it
+    for gene, gene_names in names.items():
+        for name in gene_names:
+            wanted.setdefault(name.upper(), []).append(gene)
+    by_gene: dict[str, list[dict]] = {gene: [] for gene in names}
     for record in records:
-        symbols = {symbol.upper() for symbol in clinvar_genes(record)}
-        for entry in as_list(record.get("clinvar")):
-            entry.pop("gene", None)
-        for symbol in symbols & wanted.keys():
-            by_gene[wanted[symbol]].append(record)
+        found_under = {symbol.upper() for symbol in clinvar_genes(record)}
+        if other_names:
+            found_under |= {symbol.upper() for symbol in dbnsfp_genes(record)}
+        else:
+            for entry in as_list(record.get("clinvar")):
+                entry.pop("gene", None)
+        for gene in dict.fromkeys(gene for name in found_under & wanted.keys() for gene in wanted[name]):
+            by_gene[gene].append(record)
     return by_gene
 
 
@@ -362,6 +426,94 @@ def clinvar_genes(record: dict) -> list[str]:
             if isinstance(gene, dict):
                 symbols += [str(symbol) for symbol in as_list(gene.get("symbol"))]
     return symbols
+
+
+def dbnsfp_genes(record: dict) -> list[str]:
+    """The gene names dbNSFP gives a record, one per transcript it scored."""
+    symbols = []
+    for entry in as_list(record.get("dbnsfp")):
+        if isinstance(entry, dict):
+            symbols += [str(symbol) for symbol in as_list(entry.get("genename"))]
+    return symbols
+
+
+# ---------------------------------------------------------------------------
+# What else is a gene called? HGNC keeps the current symbol and the previous ones
+# ---------------------------------------------------------------------------
+def names_of(gene: str, taken: frozenset[str] = frozenset()) -> list[str]:
+    """The names a gene may go by in myvariant.info: the panel's own symbol, then HGNC's current and previous symbols.
+
+    A name is left out when it would fetch another gene's variants. HGNC's
+    alias symbols are never used: an alias can be another gene's approved
+    symbol, as SMAD1 is an alias of GARS1. A previous symbol that is now the
+    approved symbol of another gene is skipped, as VARS2 is for VARS, and so is
+    any name in `taken`, the symbols of the other genes on the list, as QARS is
+    for EPRS. When HGNC names more than one gene that once carried the symbol,
+    as it does for QARS, neither is trusted.
+    """
+    records = hgnc_record(gene)["records"]
+    names = [gene]
+    if len(records) == 1:
+        names.append(records[0]["symbol"])
+        for previous in as_list(records[0].get("prev_symbol")):
+            if hgnc_record(previous)["found_by"] == "symbol":
+                continue  # another gene is called that now
+            names.append(previous)
+    elif len(records) > 1:
+        print(f"  note: HGNC names {len(records)} genes that carried the symbol {gene}, "
+              f"{' and '.join(record['symbol'] for record in records)}. Only the panel's symbol is used.", flush=True)
+    return [name for name in dict.fromkeys(names) if name == gene or name.upper() not in taken]
+
+
+def hgnc_record(gene: str) -> dict:
+    """What HGNC says about a symbol, from data/raw_hgnc/GENE.json or from HGNC's REST service.
+
+    Asked as an approved symbol first, then as a previous one. `records` is
+    empty when HGNC does not know the symbol at all.
+    """
+    cache_file = HGNC_CACHE_DIR / f"{gene}.json"
+    if cache_file.exists():
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    answer = {"asked": gene, "found_by": None, "fetched": str(date.today()), "records": []}
+    for field in ("symbol", "prev_symbol"):
+        documents = ask_hgnc(field, gene)
+        if documents:
+            answer["found_by"] = field
+            answer["records"] = [
+                {key: document.get(key) for key in ("hgnc_id", "symbol", "prev_symbol", "alias_symbol", "locus_type", "status")}
+                for document in documents
+            ]
+            break
+    HGNC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(answer), encoding="utf-8")
+    return answer
+
+
+def ask_hgnc(field: str, value: str) -> list[dict]:
+    """GET with retries. HGNC answers a list of documents, empty when nothing matches."""
+    for attempt in range(6):
+        try:
+            response = SESSION.get(HGNC_URL.format(field=field, value=value), headers={"Accept": "application/json"}, timeout=60)
+            if response.status_code == 200:
+                time.sleep(HGNC_PAUSE)
+                return response.json()["response"]["docs"]
+        except (requests.RequestException, ValueError, KeyError):
+            pass
+        time.sleep(2**attempt)
+    raise RuntimeError(f"HGNC kept failing for: {field} {value}")
+
+
+def resolve_symbols(panel: str) -> bool:
+    """Whether the panel set asks for the second try under other names. Read from config/panel_sets.json."""
+    if not PANEL_SETS.exists():
+        return False
+    return bool(json.loads(PANEL_SETS.read_text(encoding="utf-8")).get(panel, {}).get("resolve_symbols"))
+
+
+def answered_nothing(gene: str) -> bool:
+    """True when the gene's own symbol was asked and found no record. That answer is the two characters []."""
+    cache_file = CACHE_DIR / f"{gene}.json"
+    return cache_file.exists() and cache_file.stat().st_size <= 4 and cache_file.read_text(encoding="utf-8").strip() == "[]"
 
 
 def ask_api(params: dict) -> dict:
@@ -415,12 +567,16 @@ def main() -> int:
         )
         return 1
     genes = [gene.strip() for gene in (args.genes.split(",") if args.genes else read_gene_panel(panel_file))]
+    second_try = resolve_symbols(args.panel)
+    taken = frozenset(gene.upper() for gene in genes)  # a gene's other names must not be another gene on the list
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    # Many genes per query when the cache is short of them. With --chunk 1 the loop below downloads instead.
+    # Many genes per query when the cache is short of them. With --chunk 1 the loops below download instead.
     if args.chunk > 1:
         download_in_chunks(genes, args.chunk, args.refresh)
+        if second_try:
+            download_in_chunks([gene for gene in genes if answered_nothing(gene)], args.chunk, args.refresh, other_names=True, taken=taken)
     refresh_one_by_one = args.refresh and args.chunk == 1
 
     rows_by_id: dict[str, dict] = {}
@@ -431,20 +587,25 @@ def main() -> int:
     for number, gene in enumerate(genes, 1):
         records = download_gene(gene, refresh_one_by_one)
         downloaded += len(records)
-        rows_before = len(rows_by_id)
-        for record in records:
-            if record["_id"] in rows_by_id:
-                dropped["already listed under another gene"] += 1
-                continue
-            row, why_dropped = build_row(record, gene)
-            if row is None:
-                dropped[why_dropped] += 1
-            else:
-                rows_by_id[record["_id"]] = row
-        kept = len(rows_by_id) - rows_before
+        kept = add_rows(records, gene, rows_by_id, dropped)
         print(f"[{number:>2}/{len(genes)}] {gene:<8} downloaded {len(records):>5}  kept {kept:>5}", flush=True)
         if not records:
             genes_with_nothing.append(gene)
+
+    # The second try comes after every gene's own answer, so a record ClinVar
+    # assigns to a gene on the list stays with that gene. A record found under two
+    # genes is kept once, under the first gene of the list that got it.
+    found_under_other_names = []
+    if second_try and genes_with_nothing:
+        print(f"\nasking again for the {len(genes_with_nothing)} genes with nothing, under the other names HGNC and dbNSFP give them")
+        for number, gene in enumerate(genes_with_nothing, 1):
+            records = download_under_other_names(gene, refresh_one_by_one, taken)
+            downloaded += len(records)
+            kept = add_rows(records, gene, rows_by_id, dropped)
+            print(f"[{number:>2}/{len(genes_with_nothing)}] {gene:<8} downloaded {len(records):>5}  kept {kept:>5}  as {', '.join(names_of(gene, taken))}", flush=True)
+            if records:
+                found_under_other_names.append(gene)
+        genes_with_nothing = [gene for gene in genes_with_nothing if gene not in found_under_other_names]
 
     if not rows_by_id:
         print("No rows kept. Check the gene names and your connection.", file=sys.stderr)
@@ -460,12 +621,36 @@ def main() -> int:
     print_summary(table, downloaded, dropped)
     write_column_list(table, out.with_name("columns.json"))
     print(f"wrote {out}  ({len(table)} rows x {table.shape[1]} columns)")
+    if found_under_other_names:
+        print(f"\n{len(found_under_other_names)} genes answered only under another name: {', '.join(found_under_other_names)}")
     if genes_with_nothing:
-        print(
-            f"\nWARNING: nothing found for {', '.join(genes_with_nothing)}. myvariant.info lists "
-            "ClinVar entries for these genes but has no dbNSFP scores for them in its hg38 index."
-        )
+        print(f"\nWARNING: nothing found for {len(genes_with_nothing)} genes: {', '.join(genes_with_nothing)}.")
+        if second_try:
+            print(
+                "They were also asked for under the names HGNC and dbNSFP give them. What is left are genes "
+                "without missense variants, such as RNA genes, and genes myvariant.info holds no AlphaMissense score for."
+            )
+        else:
+            print(
+                "myvariant.info may know them by another name, as it does for AARS, HBB and GLA, or may hold no "
+                "AlphaMissense score for them. `resolve_symbols` on the panel set in config/panel_sets.json asks again under the other names."
+            )
     return 0
+
+
+def add_rows(records: list[dict], gene: str, rows_by_id: dict[str, dict], dropped: Counter) -> int:
+    """Turn a gene's records into rows of the table, and say how many were kept."""
+    rows_before = len(rows_by_id)
+    for record in records:
+        if record["_id"] in rows_by_id:
+            dropped["already listed under another gene"] += 1
+            continue
+        row, why_dropped = build_row(record, gene)
+        if row is None:
+            dropped[why_dropped] += 1
+        else:
+            rows_by_id[record["_id"]] = row
+    return len(rows_by_id) - rows_before
 
 
 def tidy(table: pd.DataFrame) -> pd.DataFrame:

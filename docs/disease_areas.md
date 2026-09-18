@@ -165,7 +165,9 @@ The set `all` in `config/panel_sets.json` has no hand-written panel list. It car
 
 Step 1 no longer asks myvariant.info one gene at a time. Genes missing from the cache are asked for in groups of up to 50 in one query, `clinvar.gene.symbol:(A OR B OR ...)` with the same filters and fields as before, and the answer is dealt out into the same per-gene files `data/raw/GENE.json` by the gene symbols ClinVar gives each record. A record that names two of the genes asked for goes into both files, as it would with two queries, and a gene that returns nothing gets an empty file so a rerun skips it. Everything after the download reads the per-gene files as before, and `--chunk 1` restores one query per gene. Before the build, the two paths were compared on nine heart genes already in the cache, TTN, MYH7, DMD, KCNQ1, LMNA, ACTA2, NKX2-5, APOA2 and GLA, 2,925 records in all: the same record ids, the same contents, in the same order, and the same as the files already on disk. Rebuilt from the cache with the changed script, the heart table and its `columns.json` have the same bytes as before.
 
-Step 0 took 376 seconds for the 296 panels, at one call per second. Step 1 took 342 seconds. 4,062 of the 4,206 genes were not yet cached, the 144 heart and cancer genes were, and the 82 grouped queries downloaded 167,317 records in 298 seconds, the largest query returning 6,856 records in 14 seconds. Building the rows from the cache and writing the table took the remaining 44 seconds. A second run from the full cache took 10 seconds and wrote the same bytes. The cache for the 4,206 genes is 251 MiB on disk and the table is 27.2 MiB.
+Step 0 took 376 seconds for the 296 panels, at one call per second. Step 1 took 342 seconds. 4,062 of the 4,206 genes were not yet cached, the 144 heart and cancer genes were, and the 82 grouped queries downloaded 167,317 records in 298 seconds, the largest query returning 6,856 records in 14 seconds. Building the rows from the cache and writing the table took the remaining 44 seconds. A second run from the full cache took 10 seconds and wrote the same bytes.
+
+That first build left 356 genes with nothing. The set `all` now also carries `resolve_symbols`, and with that flag step 1 asks a second time for every gene whose own symbol found no record. It asks HGNC for the gene's current symbol and its previous symbols, keeps HGNC's answer in `data/raw_hgnc/<GENE>.json`, and queries myvariant.info under all of those names at once, in ClinVar's gene field and in dbNSFP's: `(clinvar.gene.symbol:(A OR B) OR dbnsfp.genename:(A OR B))`, with the same filters as the first query. The answer goes to `data/raw_other_names/<GENE>.json`, apart from `data/raw/`, so the cardiac and cancer sets, which do not carry the flag, read the same cache files as before, and their tables were rebuilt from the cache with the same bytes to check that. The gene keeps the panel's symbol in the table, so the inheritance recorded in `config/all_gene_panel.txt` still applies to it. The second try for the 356 genes took 143 seconds in eight queries of 50 genes, most of it the HGNC lookups at five a second, and returned 6,504 records for 228 genes. A rerun from the caches took 12 seconds. The cache is 251 MiB in `data/raw/`, 8.5 MiB in `data/raw_other_names/` and 0.1 MiB in `data/raw_hgnc/`, and the table is 28.2 MiB.
 
 ### What came out
 
@@ -175,24 +177,25 @@ Step 0 took 376 seconds for the 296 panels, at one call per second. Step 1 took 
 |---|---|---|---|
 | panels | 6 | 9 | 296 |
 | green genes | 104 | 41 | 4,206 |
-| genes with nothing downloaded | 7 | 0 | 356 |
-| records downloaded | 16,747 | 12,911 | 196,880 |
-| rows kept | 8,790 | 4,107 | 123,454 |
-| pathogenic | 4,960 | 1,721 | 48,193 |
-| benign | 3,830 | 2,386 | 75,261 |
-| share pathogenic | 56.4% | 41.9% | 39.0% |
-| dropped as uncertain or conflicting | 7,238 | 8,697 | 61,097 |
+| genes with nothing downloaded | 7 | 0 | 128 |
+| genes found only under another name | flag off | flag off | 228 |
+| records downloaded | 16,747 | 12,911 | 203,384 |
+| rows kept | 8,790 | 4,107 | 127,618 |
+| pathogenic | 4,960 | 1,721 | 49,994 |
+| benign | 3,830 | 2,386 | 77,624 |
+| share pathogenic | 56.4% | 41.9% | 39.2% |
+| dropped as uncertain or conflicting | 7,238 | 8,697 | 62,531 |
 | score columns recommended | 13 of 17 | 16 of 17 | 16 of 17 |
-| rows found in gnomAD | 3,680 | 1,288 | 72,989 |
-| population-discordant rows | 622 | 267 | 16,279 |
-| of those, pathogenic and benign | 2 and 620 | 2 and 265 | 127 and 16,152 |
-| of those, highest in AFR, SAS, NFE | 371, 177, 74 | 161, 59, 47 | 9,808, 4,191, 2,280 |
-| genes with at least 10 rows | 79 | 37 | 2,334 |
-| genes with at least ten of each verdict | 30 | 17 | 526 |
+| rows found in gnomAD | 3,680 | 1,288 | 75,554 |
+| population-discordant rows | 622 | 267 | 16,982 |
+| of those, pathogenic and benign | 2 and 620 | 2 and 265 | 136 and 16,846 |
+| of those, highest in AFR, SAS, NFE | 371, 177, 74 | 161, 59, 47 | 10,252, 4,366, 2,364 |
+| genes with at least 10 rows | 79 | 37 | 2,436 |
+| genes with at least ten of each verdict | 30 | 17 | 547 |
 
-A further 12,218 records were dropped for having no reviewed ClinVar record, 106 because reviewed records disagreed and 5 for carrying no pathogenic or benign call. 63 genes returned records but kept no row, so 3,787 genes have rows. The table has the same 40 columns in the same order as the other two. The 16 recommended score columns are the cancer 16; `eve` is missing for 43.2% of rows, and `gerp91` at 28.4% is again close to the 30% line.
+A further 12,871 records were dropped for having no reviewed ClinVar record, 246 because another gene on the list had already brought the same variant, 111 because reviewed records disagreed and 7 for carrying no pathogenic or benign call. 89 genes returned records but kept no row, so 3,989 genes have rows. The table has the same 40 columns in the same order as the other two. The 16 recommended score columns are the cancer 16; `eve` is missing for 43.5% of rows, and `gerp91` at 28.4% is again close to the 30% line.
 
-The ten biggest genes hold 8,446 rows, 6.8% of the table, so no gene dominates the way MYH7 and TTN do in the heart table:
+The ten biggest genes hold 8,446 rows, 6.6% of the table, so no gene dominates the way MYH7 and TTN do in the heart table:
 
 | gene | rows | pathogenic | benign | inheritance | panels |
 |---|---|---|---|---|---|
@@ -216,33 +219,36 @@ Each gene's class is read from the inheritance words in `config/all_gene_panel.t
 | | one copy only | two copies only | both | X-linked | mitochondrial | GNAS |
 |---|---|---|---|---|---|---|
 | genes | 1,161 | 2,246 | 537 | 225 | 36 | 1 |
-| genes with nothing downloaded | 102 | 189 | 27 | 15 | 23 | 0 |
-| records downloaded | 66,420 | 64,145 | 51,270 | 14,088 | 816 | 141 |
-| rows kept | 43,778 | 41,975 | 26,889 | 9,954 | 768 | 90 |
-| pathogenic | 15,682 | 14,057 | 13,745 | 4,603 | 43 | 63 |
-| benign | 28,096 | 27,918 | 13,144 | 5,351 | 725 | 27 |
-| share pathogenic | 35.8% | 33.5% | 51.1% | 46.2% | 5.6% | 70.0% |
-| rows found in gnomAD | 23,658 | 31,253 | 13,157 | 4,895 | 0 | 26 |
-| population-discordant rows | 3,983 | 8,892 | 2,778 | 616 | 0 | 10 |
-| of those, pathogenic | 2 | 92 | 27 | 6 | 0 | 0 |
-| pathogenic rows at or over 0.1% in a site population | 2 | 111 | 32 | 6 | 0 | 0 |
-| genes with at least ten of each verdict | 202 | 151 | 115 | 57 | 0 | 1 |
+| genes with nothing downloaded | 50 | 47 | 3 | 5 | 23 | 0 |
+| genes found only under another name | 52 | 142 | 24 | 10 | 0 | 0 |
+| records downloaded | 68,005 | 66,932 | 52,729 | 14,761 | 816 | 141 |
+| rows kept | 44,896 | 43,746 | 27,669 | 10,449 | 768 | 90 |
+| pathogenic | 15,931 | 14,708 | 14,245 | 5,004 | 43 | 63 |
+| benign | 28,965 | 29,038 | 13,424 | 5,445 | 725 | 27 |
+| share pathogenic | 35.5% | 33.6% | 51.5% | 47.9% | 5.6% | 70.0% |
+| rows found in gnomAD | 24,459 | 32,606 | 13,479 | 4,984 | 0 | 26 |
+| population-discordant rows | 4,197 | 9,307 | 2,830 | 638 | 0 | 10 |
+| of those, pathogenic | 2 | 96 | 32 | 6 | 0 | 0 |
+| pathogenic rows at or over 0.1% in a site population | 3 | 117 | 37 | 6 | 0 | 0 |
+| genes with at least ten of each verdict | 207 | 156 | 122 | 61 | 0 | 1 |
 
-The split says where the fixed 0.1% line breaks. Of the 127 pathogenic rows that are common somewhere, 92 are in two-copy genes and 27 more in genes with both patterns; the one-copy genes contribute 2. Of the 151 pathogenic rows at or over 0.1% in one of the three site populations, 111 are in two-copy genes. The `pop_discordant` flag and the step 6 rule were left as they are, because changing them would alter the heart table; this table measures the cost instead. The 36 mitochondrial genes never appear in gnomAD's exome frequencies, so frequency evidence cannot help there, and 22 of them are transfer RNA genes with no missense variants at all.
+The split says where the fixed 0.1% line breaks. Of the 136 pathogenic rows that are common somewhere, 96 are in two-copy genes and 32 more in genes with both patterns; the one-copy genes contribute 2. Of the 163 pathogenic rows at or over 0.1% in one of the three site populations, 117 are in two-copy genes. The `pop_discordant` flag and the step 6 rule were left as they are, because changing them would alter the heart table; this table measures the cost instead. The 36 mitochondrial genes never appear in gnomAD's exome frequencies, so frequency evidence cannot help there, and 23 of them have no scored missense record: 22 are transfer RNA genes with no missense variants at all, and MT-CYB has 322 ClinVar records but no dbNSFP score in the index.
 
 ### The pathogenic variants that are common somewhere
 
-The 20 pathogenic population-discordant rows with the highest frequency in any site population. All but two are in genes where a person needs two bad copies, or where PanelApp records both patterns, and healthy carriers are expected. The two one-copy exceptions are `TTR V142I`, the amyloidosis variant carried by about 1.6% of African-ancestry samples, and `TSHZ3 S58G`, at 0.14% in Europeans with one star.
+The 20 pathogenic population-discordant rows with the highest frequency in any site population. All but one are in genes where a person needs two bad copies, or where PanelApp records both patterns, and healthy carriers are expected. The one-copy exception is `TTR V142I`, the amyloidosis variant carried by about 1.6% of African-ancestry samples; the only other one-copy pathogenic row that is common somewhere, `TSHZ3 S58G` at 0.14% in Europeans with one star, sits further down the list. The two HBB rows are new: HBB came in through the second try, because ClinVar's index files its variants under the neighbouring locus LOC106099062.
 
 | name in the table | NFE | SAS | AFR | stars | ClinVar id | inheritance |
 |---|---|---|---|---|---|---|
 | `HFE C259Y` | 5.7410% | 0.2221% | 1.0704% | 2 | 9 | BIALLELIC |
+| `HBB E7V` | 0.0053% | 0.0621% | 4.6998% | 2 | 15333 | BOTH; MONOALLELIC |
 | `SERPINA1 E288V` | 3.6534% | 0.0000% | 0.7936% | 2 | 17969 | BIALLELIC |
 | `WNT10A F228I` | 2.1253% | 0.1668% | 0.3721% | 2 | 4462 | BIALLELIC |
 | `ABCA4 R899H` | 0.0070% | 0.0033% | 1.9754% | 2 | 99448 | BIALLELIC |
 | `TTR V142I` | 0.0035% | 0.0065% | 1.5686% | 2 | 13426 | MONOALLELIC |
 | `ABCA4 G753E` | 0.3482% | 1.3784% | 0.0492% | 2 | 7888 | BIALLELIC |
 | `GNE V696M` | 0.0035% | 1.3392% | 0.0000% | 2 | 6028 | BIALLELIC; BOTH |
+| `HBB E7K` | 0.0026% | 0.0000% | 1.3351% | 2 | 15126 | BOTH; MONOALLELIC |
 | `GJB2 M34T` | 1.2417% | 0.0000% | 0.2399% | 3 | 17000 | BOTH; MONOALLELIC |
 | `SLC4A1 E238V` | 0.0063% | 1.1782% | 0.0130% | 1 | 1343088 | BOTH; MONOALLELIC |
 | `G6PD E317K` | 0.0061% | 1.1377% | 0.0000% | 2 | 10401 | X-LINKED-BIALLELIC; X-LINKED-MONOALLELIC |
@@ -254,65 +260,63 @@ The 20 pathogenic population-discordant rows with the highest frequency in any s
 | `SERPINC1 T147A` | 0.0018% | 0.0033% | 0.5721% | 3 | 1170692 | BOTH |
 | `G6PD L323P` | 0.0000% | 0.0000% | 0.5626% | 2 | 10388 | X-LINKED-BIALLELIC; X-LINKED-MONOALLELIC |
 | `TNFRSF13B C104R` | 0.5441% | 0.0261% | 0.1661% | 2 | 5302 | BIALLELIC |
-| `VWF R854Q` | 0.5356% | 0.0523% | 0.0554% | 3 | 296 | BOTH |
-| `PLG K38E` | 0.5131% | 0.0065% | 0.1538% | 2 | 13583 | BIALLELIC; MONOALLELIC |
 
-As with the two MUTYH variants in the cancer table, the position in the name is the first one dbNSFP lists, so `HFE C259Y` is the variant usually called C282Y and `SERPINA1 E288V` is the Z allele usually called E342K. `variant_id` and `clinvar_id` are the safe keys.
+As with the two MUTYH variants in the cancer table, the position in the name is the first one dbNSFP lists, so `HFE C259Y` is the variant usually called C282Y, `SERPINA1 E288V` is the Z allele usually called E342K, `HBB E7V` is the sickle cell variant usually written E6V and `HBB E7K` is haemoglobin C, usually E6K. `variant_id` and `clinvar_id` are the safe keys.
 
 ### Steps 2 and 3 on this table, unofficial
 
-The same trial as for cancer: steps 2 and 3 were loaded unchanged from a throwaway script with `DATA_DIR` pointed at `data/all/`, and for step 2 with the reference file pointed away from `config/reference_build.json`. Both ran to the end. Step 2 took 3.2 seconds and every self-check passed. Step 3 took 45 seconds. The `DSP N1526K` example in step 2 prints here, because DSP is on the list, and step 3 still labels its ablation rows "12 scores" while using 15.
+The same trial as for cancer, rerun on the table with the second try: steps 2 and 3 were loaded unchanged from a throwaway script with `DATA_DIR` pointed at `data/all/`, and for step 2 with the reference file pointed away from `config/reference_build.json`. Both ran to the end. Step 2 took 3.9 seconds and every self-check passed. Step 3 took 36 seconds. The `DSP N1526K` example in step 2 prints here, because DSP is on the list, and step 3 still labels its ablation rows "12 scores" while using 15. The random draw of step 2 changed with the table, so the six unseen genes are not the same as in the first build.
 
 **Step 2.**
 
 | | verdicts | pathogenic | benign | population-discordant |
 |---|---|---|---|---|
-| `site_oslo` | 62,947 | 28,671 | 34,276 | 2,673 |
-| `site_karachi` | 26,767 | 10,631 | 16,136 | 3,186 |
-| `site_lagos` | 29,932 | 10,237 | 19,695 | 7,849 |
+| `site_oslo` | 65,113 | 29,662 | 35,451 | 2,845 |
+| `site_karachi` | 27,743 | 11,180 | 16,563 | 3,336 |
+| `site_lagos` | 31,101 | 10,709 | 20,392 | 8,184 |
 
-The test set is 25,509 rows: 24,582 random and 927 from the six unseen genes ARID1A, COL11A1, CYP24A1, MYO15A, TPP1 and TUBA1A. 20,178 of the 97,945 training variants are held by more than one hospital. The per-population slices of the test set now clear the 30 positives step 2 asks for: 253 pathogenic rows most common in AFR, 364 in SAS, 1,046 in NFE, and 8,332 in the 12,704 rows gnomAD never saw in any of the three.
+The test set is 26,023 rows: 25,347 random and 676 from the six unseen genes ARID1A, COL10A1, CYP11A1, MYH9, TPO and TUBA1A. 20,877 of the 101,595 training variants are held by more than one hospital. The per-population slices of the test set clear the 30 positives step 2 asks for: 229 pathogenic rows most common in AFR, 411 in SAS, 1,094 in NFE, and 8,466 in the 12,827 rows gnomAD never saw in any of the three.
 
-**Step 3.** Logistic regression on 15 scores plus log frequency, 17 weights with the intercept. The largest weights of the pooled model are log frequency at -3.86, AlphaMissense at 3.16 and CADD at 2.41.
+**Step 3.** Logistic regression on 15 scores plus log frequency, 17 weights with the intercept. The largest weights of the pooled model are log frequency at -3.86, AlphaMissense at 3.15 and CADD at 2.38.
 
 | trained on | AUC, public frequency | AUC, federated count query | AUC, unseen genes only, federated query |
 |---|---|---|---|
-| `site_oslo` | 0.9670 | 0.9710 | 0.9387 |
-| `site_karachi` | 0.9671 | 0.9711 | 0.9422 |
-| `site_lagos` | 0.9670 | 0.9710 | 0.9398 |
-| pooled | 0.9672 | 0.9713 | 0.9399 |
+| `site_oslo` | 0.9659 | 0.9700 | 0.9257 |
+| `site_karachi` | 0.9660 | 0.9701 | 0.9306 |
+| `site_lagos` | 0.9659 | 0.9700 | 0.9292 |
+| pooled | 0.9661 | 0.9703 | 0.9278 |
 
-The four rows are nearly the same, which is what a linear model with 17 weights trained on 26,767 or more rows would be expected to give. False alarms of the pooled model on the 3,273 population-discordant benign test rows, by the source of frequency evidence, next to the two smaller builds:
+The four rows are nearly the same, which is what a linear model with 17 weights trained on 27,743 or more rows would be expected to give. False alarms of the pooled model on the 3,396 population-discordant benign test rows, by the source of frequency evidence, next to the two smaller builds:
 
-| frequency evidence | all, of 3,273 | cancer, of 100 | heart, of 183 |
+| frequency evidence | all, of 3,396 | cancer, of 100 | heart, of 183 |
 |---|---|---|---|
-| no frequency at all, scores only | 592 | 12 | 15 |
-| public reference, Europeans only | 369 | 8 | 7 |
-| own hospital, Oslo | 409 | 9 | 11 |
-| federated count query | 117 | 3 | 2 |
-| ceiling, real gnomAD frequencies | 116 | 3 | 2 |
+| no frequency at all, scores only | 566 | 12 | 15 |
+| public reference, Europeans only | 375 | 8 | 7 |
+| own hospital, Oslo | 420 | 9 | 11 |
+| federated count query | 110 | 3 | 2 |
+| ceiling, real gnomAD frequencies | 110 | 3 | 2 |
 
-Going from the public reference to the federated query removed 252 false alarms and introduced none, exact p = 2.8e-76. From Oslo's own patients to the federated query it removed 292 and introduced none, exact p = 2.5e-88. Sensitivity of the pooled model on the 9,995 pathogenic test rows was 0.950 with the public reference and 0.949 with the federated query. On every benign test row, for scale, the public reference gives 0.154 false alarms and the federated query 0.130; there the query removed 491 calls and introduced 119. The per-population AUC of the pooled model moves from 0.950 to 0.963 on the AFR slice and from 0.940 to 0.950 on the SAS slice, and stays at 0.956 and 0.954 on the NFE slice.
+Going from the public reference to the federated query removed 266 false alarms and introduced one, exact p = 2.3e-78. From Oslo's own patients to the federated query it removed 310 and introduced none, exact p = 9.6e-94. Sensitivity of the pooled model on the 10,200 pathogenic test rows was 0.948 with the public reference and 0.947 with the federated query. On every benign test row, for scale, the public reference gives 0.155 false alarms and the federated query 0.131; there the query removed 498 calls and introduced 115. The per-population AUC of the pooled model moves from 0.960 to 0.971 on the AFR slice and from 0.929 to 0.941 on the SAS slice, and goes from 0.950 to 0.948 on the NFE slice.
 
 The same false-alarm table split by the inheritance class of the gene, computed in the throwaway script from the same pooled model and cut:
 
-| frequency evidence | one copy only, of 826 | two copies only, of 1,770 | both, of 554 | X-linked, of 121 |
+| frequency evidence | one copy only, of 834 | two copies only, of 1,872 | both, of 549 | X-linked, of 138 |
 |---|---|---|---|---|
-| no frequency at all, scores only | 158 | 320 | 101 | 13 |
-| public reference, Europeans only | 103 | 197 | 59 | 10 |
-| own hospital, Oslo | 117 | 212 | 69 | 11 |
-| federated count query | 36 | 58 | 18 | 5 |
-| ceiling, real gnomAD frequencies | 35 | 58 | 18 | 5 |
+| no frequency at all, scores only | 115 | 324 | 106 | 21 |
+| public reference, Europeans only | 73 | 225 | 61 | 16 |
+| own hospital, Oslo | 87 | 246 | 68 | 19 |
+| federated count query | 31 | 58 | 14 | 7 |
+| ceiling, real gnomAD frequencies | 30 | 59 | 14 | 7 |
 
-Public reference to federated query, by class: 67 removed and none introduced in one-copy genes, p = 1.4e-20; 139 and none in two-copy genes, p = 2.9e-42; 41 and none in genes with both patterns, p = 9.1e-13; 5 and none in X-linked genes, p = 0.0625. So the effect is there in every class and is largest, in count, in the two-copy genes, where it is also least safe: sensitivity on pathogenic test rows is 0.965 in one-copy genes under either evidence and 0.927 with the public reference against 0.923 with the federated query in two-copy genes. The test set holds 26 pathogenic population-discordant rows; the pooled model called 15 of them pathogenic with the public reference and 12 with the federated query, so three true calls were lost, among them `CRB1 P767T` and `SRD5A2 R246Q`, both in two-copy genes. The cancer test set held one such row, `MUTYH Y151C`, and it kept its call.
+Public reference to federated query, by class: 43 removed and one introduced in one-copy genes, p = 5.1e-12; 167 and none in two-copy genes, p = 1.1e-50; 47 and none in genes with both patterns, p = 1.4e-14; 9 and none in X-linked genes, p = 0.0039. So the effect is there in every class and is largest, in count, in the two-copy genes, where it is also least safe: sensitivity on pathogenic test rows is 0.962 with the public reference and 0.961 with the federated query in one-copy genes, and 0.923 and 0.921 in two-copy genes. The test set holds 27 pathogenic population-discordant rows; the pooled model called 11 of them pathogenic with the public reference and the same 11 with the federated query, so no true call was lost in this draw. In the first build's draw, three were, among them `CRB1 P767T` and `SRD5A2 R246Q`, both in two-copy genes. The cancer test set held one such row, `MUTYH Y151C`, and it kept its call.
 
 ### Limits seen in this build
 
-- **356 genes returned nothing, 8.5% of the list.** 45 are not protein-coding genes at all: 22 mitochondrial transfer RNA genes, 9 small nuclear RNA genes, 3 microRNA, 3 long non-coding RNA, 2 small nucleolar RNA, 2 processed transcript and 1 immunoglobulin gene, plus 3 with no biotype recorded, and none of these has missense variants. For 7 more, PanelApp's own gene record gives a newer HGNC symbol than the one on the panel, for example GSDME for DFNA5 and ODAPH for C4orf26. The remaining 304 carry the symbol PanelApp treats as current, and many of those are symbols HGNC has since renamed. 25 of them were tried again under the current HGNC symbol with the same query, and 24 returned records: 86 for AARS1 in place of AARS, 184 for MMUT in place of MUT, 34 for SEPTIN9 in place of SEPT9, 43 for TAFAZZIN in place of TAZ, and so on down the list of transfer RNA synthetase genes CARS, GARS, HARS, NARS and WARS. Step 1 queries ClinVar by symbol only, so a gene whose ClinVar symbol differs from the PanelApp symbol is lost quietly. The warning at the end of step 1 blames missing dbNSFP scores for all of them, which is too simple. A symbol lookup before the query, through HGNC or PanelApp's alias field, would recover a good share of the 304 and has not been written.
+- **128 genes returned nothing, 3.0% of the list, after the second try under other names.** The first build had 356. myvariant.info knew 228 of them by another name. For 62 of those, ClinVar's index uses a symbol HGNC approved later than the panel's: AARS1 for AARS, MMUT for MUT, GSDME for DFNA5. For 136, ClinVar's index names a neighbouring locus and only dbNSFP names the gene itself: LOC106099062 for HBB, RPL36A-HNRNPH2 for GLA, FPGT-TNNI3K for TNNI3K. The other 30 have records of both kinds. The second try recovered 6,504 records and 4,164 rows for 202 genes: 1,801 pathogenic and 2,363 benign, 703 of them population-discordant, 9 of those pathogenic, the sickle cell variant among them. The biggest gains were FLG with 311 rows, COL4A3 with 294, GLA with 258 and MUT with 155. By inheritance the gained rows are 1,118 in one-copy genes, 1,771 in two-copy genes, 780 in genes with both patterns and 495 in X-linked genes. The `gene` column keeps the panel's symbol, so the rows read `MUT` and `AARS`. A name is skipped when it would fetch another gene's variants: HGNC's aliases are never used, because an alias can be another gene's approved symbol, as SMAD1 is an alias of GARS1; a previous symbol that is now another gene's approved symbol is dropped, VARS2 for VARS; and so is any symbol of another gene on the list, QARS for EPRS. A variant that two genes on the list both bring is kept once, under the gene that comes first: the second try runs after every gene's own answer, so ClinVar's own assignment wins over a match through dbNSFP's gene name, and 246 records were set aside that way. The heart set's seven genes with nothing would gain 314 rows the same way, 259 of them in GLA, but the cardiac set does not carry the flag, so its table is unchanged. Of the 128 genes still empty, 46 are not protein-coding genes: 22 mitochondrial transfer RNA genes, 10 small nuclear RNA, 5 long non-coding RNA, 3 microRNA, 2 small nucleolar RNA, 1 immunoglobulin, 1 T cell receptor and 1 other RNA gene, plus AL117258.1, which HGNC does not know. The 82 protein-coding genes were checked one by one with count queries. 65 have missense records with an AlphaMissense score but no pathogenic or benign verdict among them. 14 have ClinVar records with dbNSFP scores but no AlphaMissense score, NOTCH1 with 3,975 ClinVar records among them, with JAK1, DSPP, BSND, ALX4 and CSF2RA; AlphaMissense is the filter every query carries, so these are the cost of that choice. MT-CYB and DHRSX have ClinVar records with no dbNSFP score at all, and RYBP has no ClinVar record under any name.
 - **The 0.1% line is wrong for half the list.** 2,246 of the 4,206 genes are two-copy only and 537 more carry both patterns, against 17 two-copy genes in the heart set. The numbers above show what that costs and where. A rule that reads the inheritance word, now recorded for every gene, is the obvious next step and has not been written.
-- **The unseen-gene test shrinks to nothing.** Step 2 holds out six whole genes whatever the size of the list, so the "honest" AUC rests on 927 of 25,509 test rows, 3.6%, from six genes out of 3,787 with rows. For heart it rested on 777 of 2,373 rows.
-- **Sizes.** The hospital files are 10.6 MiB for Oslo's verdicts and 6.5 MiB for its patient counts, and the run is 76 MiB in all. Nothing in steps 2 and 3 slowed down in a way that matters: 3 seconds and 45 seconds on a laptop.
-- **Time.** PanelApp is the slow part, at one call per second, and a full rebuild from nothing is about 12 minutes for the two steps. A rebuild from the caches needs no network.
+- **The unseen-gene test shrinks to nothing.** Step 2 holds out six whole genes whatever the size of the list, so the "honest" AUC rests on 676 of 26,023 test rows, 2.6%, from six genes out of 3,989 with rows. For heart it rested on 777 of 2,373 rows.
+- **Sizes.** The hospital files are 11.0 MiB for Oslo's verdicts and 6.7 MiB for its patient counts, and the run is 78 MiB in all. Nothing in steps 2 and 3 slowed down in a way that matters: 4 seconds and 36 seconds on a laptop.
+- **Time.** PanelApp is the slow part, at one call per second, and a full rebuild from nothing is about 15 minutes for the two steps, the second try under other names included. A rebuild from the caches needs no network.
 - **Every gene is scored the same way whatever its panel.** A variant in a gene that sits on 15 panels is one row, attributed to the gene, and the table does not record which disease area asked for it. The panel ids are in the gene list header and per gene line, so that can be recovered.
 
 ## What does not scale yet

@@ -27,6 +27,7 @@
   "all": {
     "title": "All NHS signed-off panels",
     "from_signed_off_list": true,
-    "note": "No hand-written list. Step 0 takes every panel on PanelApp's signed-off list, at the version the list reports on the day it runs, and records them in config/all_panel_versions.json."
+    "resolve_symbols": true,
+    "note": "No hand-written list. Step 0 takes every panel on PanelApp's signed-off list, at the version the list reports on the day it runs, and records them in config/all_panel_versions.json. With resolve_symbols, step 1 asks a second time for every gene that answered nothing, under HGNC's current and previous symbols and dbNSFP's gene name, and caches that answer apart from the first. The cardiac and cancer sets do not carry the flag, so their tables stay as they were."
   }
 }

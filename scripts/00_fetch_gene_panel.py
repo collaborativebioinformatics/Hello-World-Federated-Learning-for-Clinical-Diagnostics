@@ -21,6 +21,13 @@ asks PanelApp for what is missing. For `all` that is about 300 panels at one
 call per second, and a run that PanelApp cuts short carries on from where it
 stopped.
 
+The gene symbol written is the one on the panel, as PanelApp spells it. Some
+of those are symbols HGNC has since replaced, AARS for AARS1 or MUT for MMUT,
+and PanelApp's own record can carry the newer one, GSDME for DFNA5. Step 0
+keeps the panel's spelling so that a gene can be found on the panel again. A
+set with `resolve_symbols` in config/panel_sets.json makes step 1 look the
+other names up when the panel's symbol finds no variants.
+
 Writes config/<NAME>_gene_panel.txt. Open API, no login.
 
 Usage:
