@@ -2,10 +2,16 @@
 <!--
   The pipeline as it was actually built: the tools, the methods and the numbers, with as few words as possible.
   Same look as pipeline_flowchart.html, which shows the first plan.
-  Sources: scripts/00 to 04 and hospital_query.py, data/sites.json, data/results_local.json,
-  data/results_checks.json and docs/step4_results.md. Render to PNG with:
+  Sources, on 18 September 2026: scripts/00 to 06 and hospital_query.py, data/sites.json, data/results_local.json,
+  data/cancer/results_local.json, data/all/results_local.json, data/results_checks.json, docs/quarterly_replay.json,
+  docs/disease_areas.md, docs/other_mutation_types.md, docs/cancer_results.md, docs/step4_results.md and docs/patient_query.md.
+  Render to PNG with
 
-  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1590 --screenshot=docs/pipeline_flowchart_built.png docs/pipeline_flowchart_built.html
+  uv run --with pillow python scripts/render_docs_png.py pipeline_flowchart_built
+
+  which is headless Chrome at 740 CSS pixels wide and device scale 2, trimmed under the last line. By hand:
+
+  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,2296 --screenshot=docs/pipeline_flowchart_built.png docs/pipeline_flowchart_built.html
 -->
 <html lang="en">
 <head>
@@ -35,8 +41,11 @@
   .legend{font-size:11px;color:#5f5e5a;margin:12px 0 0;line-height:1.5}
   .file{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#5f5e5a;margin:7px 0 2px}
   .to{color:#888780;margin:0 6px}
+  .row{display:flex;gap:14px;align-items:flex-start}
+  .note{font-size:11px;color:#5f5e5a;margin:0;line-height:1.5}
   /* bars: one cell wide, drawn to scale */
   .tb td.track{width:150px;text-align:left;padding:2px 4px}
+  .tb td.t60{width:60px}.tb td.t50{width:50px}
   .bar{display:block;height:9px;border-radius:2px;background:#d3d1c7}
   .bar.red{background:#e7a9a9}.bar.green{background:#a9cf86}.bar.hollow{background:#fff;border:1.5px solid #a9cf86;box-sizing:border-box}
   /* the split, as one strip drawn to scale */
@@ -45,14 +54,14 @@
   .strip div.locked{border-style:dashed;background:#fff}
   .badge{display:inline-block;font:11px ui-monospace,Menlo,Consolas,monospace;padding:1px 7px;border-radius:4px}
   .read{display:flex;align-items:center;font:11px ui-monospace,Menlo,Consolas,monospace;margin:4px 0 0}
-  .read > *{white-space:nowrap;flex:none}.read b{font-weight:500;width:92px}.read i{font-style:normal;color:#5f5e5a}
+  .read > *{white-space:nowrap;flex:none}.read b{font-weight:500;width:100px}.read i{font-style:normal;color:#5f5e5a}
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M2 1L8 5L2 9" style="fill:none;stroke:#888780;stroke-width:1.5"/></marker></defs></svg>
 <div class="wrap"><div class="fc">
 <h1>Federated variant classification with population context</h1>
-<p class="intro">As built. Real public data, simulated patients. Rows never leave a hospital.</p>
+<p class="intro">As built on 18 September 2026. Real public data, simulated patients. Rows never leave a hospital.</p>
 
 <div style="display:flex;gap:40px">
 <div class="box" style="width:200px"><p class="cap">ClinVar</p><p class="sub" style="margin:0">expert verdicts · 2025-05</p></div>
@@ -61,22 +70,44 @@
 </div>
 <svg width="680" height="40" aria-hidden="true"><path class="ln" d="M100 0V20H580V0"/><path class="ln" d="M340 0V40" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap" style="margin-bottom:6px">0. Fetch · two open APIs</p>
-<span class="chip">PanelApp</span><span class="to">→</span><span class="chip lab">104 NHS heart genes</span>
-<span style="display:inline-block;width:22px"></span>
-<span class="chip">myvariant.info</span><span class="to">→</span><span class="chip lab">1 record = verdict + scores + frequencies</span></div>
+<div class="box" style="width:680px"><p class="cap" style="margin-bottom:6px">0. Fetch · three open sources</p>
+<div class="row">
+<div style="flex:none">
+<p class="sub" style="margin:0 0 5px"><span class="chip">PanelApp</span><span class="to">→</span>NHS signed-off panels, green genes only</p>
+<table class="tb"><tr><th>disease area</th><th>panels</th><th>genes</th><th>two-copy genes</th></tr>
+<tr><td>heart</td><td>6</td><td>104</td><td>19</td></tr>
+<tr><td>inherited cancer</td><td>9</td><td>41</td><td>3</td></tr>
+<tr><td>all NHS signed-off panels</td><td>296</td><td>4,206</td><td>2,339</td></tr></table>
+</div>
+<div style="flex:1;min-width:0">
+<p class="sub" style="margin:0 0 5px"><span class="chip">myvariant.info</span><span class="to">→</span></p>
+<p class="sub" style="margin:0 0 9px"><span class="chip lab">1 record = verdict + scores + frequencies</span></p>
+<p class="sub" style="margin:0 0 5px"><span class="chip">UCSC</span><span class="to">→</span></p>
+<p class="sub" style="margin:0"><span class="chip">reference genome GRCh38 · 3.27 GB</span></p>
+</div></div>
+<p class="sub" style="margin:6px 0 0">two-copy gene: both copies must be bad to cause disease, so healthy carriers are expected · read for every gene, used by the line in step 6</p></div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">1. One joined table</p><p class="sub">8,790 variants · 97 genes · scores 0 to 1, higher = more damaging</p>
+<div class="box" style="width:680px"><p class="cap">1. One joined table per area</p><p class="sub">same 40 columns everywhere · scores 0 to 1, higher = more damaging · heart 8,790 rows in 97 genes · inherited cancer 4,107 in 41 · all NHS panels 127,618 in 3,989</p>
+<div class="row">
 <table class="tb"><tr><th>variant</th><th>CADD</th><th>AlphaMis</th><th>AF NFE</th><th>AF SAS</th><th>AF AFR</th><th>label</th></tr>
 <tr><td>MYH7 R403Q</td><td>0.93</td><td>0.81</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
 <tr><td>TTN I3716V</td><td>0.08</td><td>0.04</td><td class="af">.019</td><td class="af">.041</td><td class="af">.004</td><td class="lab">0</td></tr>
 <tr><td>DSP N1526K</td><td>0.22</td><td>0.47</td><td class="af">.0005</td><td class="af">.0003</td><td class="af">.152</td><td class="lab">0</td></tr>
 <tr><td>TNNT2 R92W</td><td>0.91</td><td>0.79</td><td class="af">0</td><td class="af">0</td><td class="af">0</td><td class="lab">1</td></tr>
-<tr><td>… 8,790 rows</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div>
+<tr><td>… 8,790 rows</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+<div><p class="file" style="margin:0 0 3px">other types · heart only · no scores</p>
+<table class="tb"><tr><th>variant</th><th>type</th><th>label</th></tr>
+<tr><td>KCNH2 P298fs</td><td>frameshift</td><td class="lab">1</td></tr>
+<tr><td>ACTN2 P32fs</td><td>frameshift</td><td class="lab">0</td></tr>
+<tr><td>TTN c.11254+2T&gt;C</td><td>splice site</td><td class="lab">0</td></tr>
+<tr><td>MYBPC3 25-letter del</td><td>intronic</td><td class="lab">contested</td></tr>
+<tr><td>… 73,570 rows</td><td></td><td></td></tr></table></div>
+</div>
+<p class="note" style="margin-top:7px">Missense only in the scored table, because the scores exist only for those. Every other small mutation of the heart genes goes to the query with its mutation type instead: 13,056 harmful, 60,256 harmless, 258 contested. One spelling: an insertion or deletion inside a repeat can be written at several positions, so each is slid to its leftmost position on the reference genome and a hospital's own way of writing it still matches. 6,494 of 8,890 can be written more than one way.</p></div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap" style="margin-bottom:6px">2. Random split · seed 12</p>
+<div class="box" style="width:680px"><p class="cap" style="margin-bottom:2px">2. Random split · seed 12</p><p class="sub">heart shown · the same script with --panel deals any area, and a sister script the other mutation types</p>
 <div class="strip"><div class="locked" style="width:22.8%">test 2,373</div><div style="width:41.4%">Oslo 4,319</div><div style="width:17.4%">Karachi 1,817</div><div style="width:18.4%">Lagos 1,921</div></div></div>
 <svg width="680" height="40" aria-hidden="true"><path class="ln" d="M340 0V20M80 20H599"/><path class="ln" d="M80 20V40" marker-end="url(#ah)"/><path class="ln" d="M253 20V40" marker-end="url(#ah)"/><path class="ln" d="M426 20V40" marker-end="url(#ah)"/><path class="ln" d="M599 20V40" marker-end="url(#ah)"/></svg>
 
@@ -109,44 +140,60 @@
 </div>
 <svg width="680" height="40" aria-hidden="true"><path class="ln" d="M80 0V40"/><path class="ln" d="M253 0V20H599V0"/><path class="ln" d="M426 0V40" marker-end="url(#ah)"/></svg>
 
-<div style="position:relative;padding-left:256px"><div class="lane"></div>
-<div class="box" style="width:340px"><p class="cap" style="margin-bottom:6px">4. NVFlare · FedAvg</p>
-<span class="chip">average = [4.10, 2.40, <span class="af">−3.57</span>]</span>
-<p class="sub" style="margin:6px 0 0">14 numbers travel, never a variant</p></div>
+<div style="position:relative;padding-left:173px"><div class="lane"></div>
+<div class="box" style="width:423px"><p class="cap" style="margin-bottom:6px">4. NVFlare · FedAvg</p>
+<div class="row">
+<div><span class="chip">average = [4.10, 2.40, <span class="af">−3.57</span>]</span>
+<p class="sub" style="margin:6px 0 0">14 numbers travel, never a variant</p>
+<p class="note" style="margin-top:4px;max-width:200px">Steps 2 to 4 take --panel. On inherited cancer, 5 runs: federated 3 of 100 false alarms, the same as pooled, in every run.</p></div>
+<table class="tb"><tr><th>trained on</th><th colspan="2">AUC</th></tr>
+<tr><td>Oslo only</td><td class="track t50"><span class="bar" style="width:97.81%"></span></td><td>0.9781</td></tr>
+<tr><td>federated</td><td class="track t50"><span class="bar green" style="width:97.83%"></span></td><td class="ok">0.9783</td></tr>
+<tr><td>pooled</td><td class="track t50"><span class="bar" style="width:97.84%"></span></td><td>0.9784</td></tr></table>
+</div></div>
 <svg style="position:absolute;left:596px;top:8px" width="84" height="60" viewBox="0 0 84 60" aria-hidden="true"><path class="ln" d="M0 8H22a8 8 0 0 1 8 8V36a8 8 0 0 1 -8 8H2" marker-end="url(#ah)"/><text x="34" y="24" font-size="11" fill="#5f5e5a">×20</text><text x="34" y="38" font-size="11" fill="#5f5e5a">rounds</text></svg>
 </div>
 <svg width="680" height="44" aria-hidden="true"><path class="ln" d="M426 0V22M80 0V22H426"/><path class="ln" d="M340 22V44" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap" style="margin-bottom:6px">5. Score the locked test set</p>
-<div style="display:flex;gap:16px;align-items:flex-start">
-<table class="tb"><tr><th>trained on</th><th colspan="2">AUC</th></tr>
-<tr><td>Oslo only</td><td class="track" style="width:90px"><span class="bar" style="width:97.81%"></span></td><td>0.9781</td></tr>
-<tr><td>federated</td><td class="track" style="width:90px"><span class="bar green" style="width:97.83%"></span></td><td class="ok">0.9783</td></tr>
-<tr><td>pooled</td><td class="track" style="width:90px"><span class="bar" style="width:97.84%"></span></td><td>0.9784</td></tr></table>
-<table class="tb"><tr><th>frequency the model is given</th><th colspan="2">false alarms, of 183 harmless</th></tr>
-<tr><td>none</td><td class="track"><span class="bar red" style="width:100%"></span></td><td class="bad">15</td></tr>
-<tr><td>public database</td><td class="track"><span class="bar red" style="width:46.7%"></span></td><td class="bad">7</td></tr>
-<tr><td>own hospital</td><td class="track"><span class="bar red" style="width:73.3%"></span></td><td class="bad">11</td></tr>
-<tr><td>all three hospitals</td><td class="track"><span class="bar green" style="width:13.3%"></span></td><td class="ok">2</td></tr>
-<tr><td>true frequency</td><td class="track"><span class="bar hollow" style="width:13.3%"></span></td><td>2</td></tr></table>
-</div></div>
+<div class="box" style="width:680px"><p class="cap">5. Quarterly replay · the hospitals grow, the model is refitted, the locked test set is scored</p>
+<p class="sub">heart · false alarms among 183 harmless test variants that are common in one population and rare in another · pooled fit stands in for NVFlare</p>
+<table class="tb"><tr><th>quarter</th><th>patients Oslo / Karachi / Lagos</th><th>verdicts</th><th>public database</th><th>all three hospitals</th><th>log frequency weight</th></tr>
+<tr><td>Q1</td><td>5,000 / 1,000 / 1,000</td><td>1,917</td><td class="bad">9</td><td class="ok">4</td><td class="af">−2.74</td></tr>
+<tr><td>Q2</td><td>10,000 / 2,000 / 2,000</td><td>3,594</td><td class="bad">7</td><td class="ok">3</td><td class="af">−3.21</td></tr>
+<tr><td>Q3</td><td>15,000 / 3,000 / 3,000</td><td>5,071</td><td class="bad">7</td><td class="ok">2</td><td class="af">−3.54</td></tr>
+<tr><td>Q4</td><td>20,000 / 4,000 / 4,000</td><td>6,417</td><td class="bad">7</td><td class="ok">2</td><td class="af">−3.73</td></tr></table>
+<p class="sub" style="margin:6px 0 0">Q4 is the build, byte for byte · each quarter: references refreshed, verdicts accumulate, a training job, a check on the locked test set, release to the query</p></div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">6. Patient at Oslo → ask every hospital for counts</p><p class="sub">DSP N1526K · 0.05% in the public database</p>
+<div class="box" style="width:680px"><p class="cap">Scored on the locked test set · pooled model · three disease areas</p>
+<p class="sub">false alarms among harmless test variants that are common in one population and rare in another, by the frequency the model is given</p>
+<table class="tb"><tr><th>frequency the model is given</th><th colspan="2">heart, of 183</th><th colspan="2">cancer, of 100</th><th colspan="2">all panels, of 3,396</th></tr>
+<tr><td>none</td><td class="track t60"><span class="bar red" style="width:100%"></span></td><td class="bad">15</td><td class="track t60"><span class="bar red" style="width:100%"></span></td><td class="bad">12</td><td class="track t60"><span class="bar red" style="width:100%"></span></td><td class="bad">566</td></tr>
+<tr><td>public database</td><td class="track t60"><span class="bar red" style="width:46.7%"></span></td><td class="bad">7</td><td class="track t60"><span class="bar red" style="width:66.7%"></span></td><td class="bad">8</td><td class="track t60"><span class="bar red" style="width:66.3%"></span></td><td class="bad">375</td></tr>
+<tr><td>own hospital</td><td class="track t60"><span class="bar red" style="width:73.3%"></span></td><td class="bad">11</td><td class="track t60"><span class="bar red" style="width:75%"></span></td><td class="bad">9</td><td class="track t60"><span class="bar red" style="width:74.2%"></span></td><td class="bad">420</td></tr>
+<tr><td>all three hospitals</td><td class="track t60"><span class="bar green" style="width:13.3%"></span></td><td class="ok">2</td><td class="track t60"><span class="bar green" style="width:25%"></span></td><td class="ok">3</td><td class="track t60"><span class="bar green" style="width:19.4%"></span></td><td class="ok">110</td></tr>
+<tr><td>true frequency</td><td class="track t60"><span class="bar hollow" style="width:13.3%"></span></td><td>2</td><td class="track t60"><span class="bar hollow" style="width:25%"></span></td><td>3</td><td class="track t60"><span class="bar hollow" style="width:19.4%"></span></td><td>110</td></tr></table>
+<p class="sub" style="margin:6px 0 0">cancer is an official run, steps 2 to 4 · all panels is a first look, steps 2 and 3 · true frequency is gnomAD per population, which no hospital may use</p></div>
+<svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
+
+<div class="box" style="width:680px"><p class="cap">6. Patient at Oslo → one variant name out, counts back</p><p class="sub">DSP N1526K · 0.05% in the public database · line 0.1%: one bad copy of DSP can be enough to cause disease</p>
 <table class="tb"><tr><th>hospital</th><th>copies seen</th><th>gene copies</th><th>among sick</th><th>among healthy</th></tr>
 <tr><td>Oslo</td><td>24</td><td>40000</td><td>4 / 6000</td><td>20 / 34000</td></tr>
 <tr><td>Karachi</td><td>1</td><td>8000</td><td>0 / 1200</td><td>1 / 6800</td></tr>
 <tr><td>Lagos</td><td class="af">1207</td><td>8000</td><td>175 / 1200</td><td class="af">1032 / 6800</td></tr></table>
-<p class="sub" style="margin:6px 0 0">only counts travel · under 5 is hidden</p></div>
+<p class="sub" style="margin:6px 0 6px">only counts travel · under 5 is hidden · three areas and 82,252 names on the screen, any small mutation of the heart genes in any spelling</p>
+<p class="sub" style="margin:0 0 6px"><span class="chip">healthy ≥ the gene's line</span><span class="to">→</span><span class="badge ok">likely harmless</span><span style="display:inline-block;width:14px"></span><span class="chip">sick ≥ 3× healthy</span><span class="to">→</span><span class="badge bad">keep flagged</span><span style="display:inline-block;width:14px"></span><span class="chip">line 0.1% · 1% for a two-copy gene</span></p>
+<p class="note">On screen too: the trained model's opinion, here 0.1% likely harmful against a cut-off of 57%, from the pooled model of step 3 until step 4 saves the NVFlare weights. For a change that cuts the protein short, how many patients carry any such change in the gene: for KCNH2 P298fs, 108 of 34,000 healthy patients at Oslo, 0 at Karachi, 17 of 6,800 at Lagos.</p>
+</div>
 <svg width="680" height="36" aria-hidden="true"><path class="ln" d="M340 0V36" marker-end="url(#ah)"/></svg>
 
-<div class="box" style="width:680px"><p class="cap">7. Reading · two fixed rules</p>
-<p class="sub" style="margin:0 0 2px"><span class="chip">healthy ≥ 0.1%</span><span class="to">→</span><span class="badge ok">likely harmless</span><span style="display:inline-block;width:18px"></span><span class="chip">sick ≥ 3× healthy</span><span class="to">→</span><span class="badge bad">keep flagged</span></p>
+<div class="box" style="width:680px"><p class="cap">What the query said</p>
 <div class="read"><b>DSP N1526K</b><i>Oslo alone</i>&nbsp;<span class="badge af">cannot tell</span><span class="to">→</span><i>all 3 hospitals</i>&nbsp;<span class="badge ok">likely harmless</span>&nbsp;<i>Lagos: 15% healthy</i></div>
 <div class="read"><b>TTR V142I</b><i>Oslo alone</i>&nbsp;<span class="badge af">cannot tell</span><span class="to">→</span><i>all 3 hospitals</i>&nbsp;<span class="badge bad">keep flagged</span>&nbsp;<i>Lagos: 1.5% healthy, 7.8% sick</i></div>
+<div class="read"><b>MYBPC3 deletion</b><i>as typed</i>&nbsp;<span class="badge af">cannot tell</span><span class="to">→</span><i>one spelling</i>&nbsp;<span class="badge ok">likely harmless</span>&nbsp;<i>Karachi: 3.2% healthy, 8 spellings</i></div>
 </div>
 
-<p class="legend">Blue = the answer being learned. Amber = frequency, the only thing that differs per hospital. Steps 3 and 4 show 3 of the model's 14 numbers: AlphaMissense, CADD, log frequency.</p>
+<p class="legend">Blue = the answer being learned. Amber = frequency, the only thing that differs per hospital. Steps 3 and 4 show 3 of the heart model's 14 numbers: AlphaMissense, CADD, log frequency. The cancer and all-panels models have 17.</p>
 </div></div>
 </body>
 </html>

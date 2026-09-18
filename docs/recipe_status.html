@@ -8,7 +8,11 @@
     class="step todo"   grey   not started
   Change that one word, edit the text lines, change the date, then re-render:
 
-  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,960 --screenshot=docs/recipe_status.png docs/recipe_status.html
+  uv run --with pillow python scripts/render_docs_png.py recipe_status
+
+  which is headless Chrome at 740 CSS pixels wide and device scale 2, trimmed under the last step. By hand:
+
+  chrome --headless=new --hide-scrollbars --force-device-scale-factor=2 --window-size=740,1534 --screenshot=docs/recipe_status.png docs/recipe_status.html
 -->
 <html lang="en">
 <head>
@@ -23,6 +27,7 @@
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
   .step{display:flex;gap:12px;border:1px solid;border-radius:8px;padding:9px 12px}
   .num{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:500;color:#fff}
+  .num.two{font-size:11px}
   .body{flex:1}
   .title{font-size:14px;font-weight:500;margin:0 0 3px}
   .pill{float:right;font-size:11px;padding:1px 8px;border-radius:9px;border:1px solid}
@@ -42,7 +47,7 @@
 <body>
 <div class="page">
 <h1>Recipe status</h1>
-<p class="date">Updated 17 September 2026 · green steps run from a fresh clone with the commands shown</p>
+<p class="date">Updated 18 September 2026 · green steps run from a fresh clone with the commands shown</p>
 <div class="legend">
   <span><span class="dot" style="background:#3B6D11"></span>built and tested</span>
   <span><span class="dot" style="background:#854F0B"></span>being built or in review</span>
@@ -50,60 +55,66 @@
 </div>
 
 <div class="step done"><div class="num">0</div><div class="body">
-  <span class="pill">done</span><p class="title">Gene list</p>
-  <p class="line">104 diagnostic-grade genes from six NHS-signed-off PanelApp heart panels, versions pinned</p>
-  <p class="line">makes <code>config/cardiac_gene_panel.txt</code> · run <code>uv run python scripts/00_fetch_gene_panel.py</code></p>
+  <span class="pill">done</span><p class="title">Gene lists</p>
+  <p class="line">three disease areas from NHS signed-off PanelApp panels, green genes only, versions pinned: heart 6 panels, 104 genes · inherited cancer 9 panels, 41 genes · all signed-off panels 296 panels, 4,206 genes · each gene's mode of inheritance recorded beside it</p>
+  <p class="line">makes <code>config/cardiac_gene_panel.txt</code>, <code>cancer_gene_panel.txt</code>, <code>all_gene_panel.txt</code> · run <code>uv run python scripts/00_fetch_gene_panel.py</code>, then <code>--panel cancer</code> and <code>--panel all</code></p>
+  <p class="line">reference genome GRCh38, 3.27 GB, read offline for the spelling of insertions and deletions: <code>scripts/00_fetch_reference_genome.py</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step done"><div class="num">1</div><div class="body">
-  <span class="pill">done</span><p class="title">Variant table</p>
-  <p class="line">8,790 missense variants in 97 genes · 4,960 pathogenic, 3,830 benign · 13 score columns · 622 population-discordant</p>
-  <p class="line">makes <code>data/variants.csv</code>, <code>data/columns.json</code> · run <code>uv run python scripts/01_build_table.py</code></p>
+  <span class="pill">done</span><p class="title">Variant tables</p>
+  <p class="line">missense, with the same 40 columns: heart 8,790 rows in 97 genes, 13 score columns · inherited cancer 4,107 rows in 41 genes, 16 · all panels 127,618 rows in 3,989 genes, 16 · every other small mutation of the heart genes: 73,570 rows, no scores, one spelling per insertion or deletion</p>
+  <p class="line">makes <code>data/variants.csv</code>, <code>data/cancer/</code>, <code>data/all/</code>, <code>data/other_types/</code> · run <code>uv run python scripts/01_build_table.py</code>, with <code>--panel cancer</code> or <code>--panel all</code>, and <code>scripts/01_build_other_types.py</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step done"><div class="num">2</div><div class="body">
   <span class="pill">done</span><p class="title">Hospital files</p>
-  <p class="line">test set 2,373 rows: a random fifth split by amino-acid position, plus six unseen genes · verdicts: Oslo 4,319, Karachi 1,817, Lagos 1,921 · patient cohorts 20,000 / 4,000 / 4,000</p>
-  <p class="line">makes <code>data/test/</code>, <code>data/site_*/verdicts.csv</code> and <code>patient_counts.csv</code>, <code>data/public_reference.csv</code></p>
-  <p class="line">run <code>uv run python scripts/02_simulate_hospitals.py</code> · file and column rules in <code>docs/data_contract.md</code></p>
-  <p class="line">reviewed by the ML side, test-set leak fixed: <code>docs/step2_review.md</code> · every build self-checks, <code>--self-check</code> proves the checks can fail</p>
+  <p class="line">heart: test set 2,373 rows, a random fifth split by amino-acid position plus six unseen genes · verdicts Oslo 4,319, Karachi 1,817, Lagos 1,921 · patient cohorts 20,000 / 4,000 / 4,000 · the same dealing for the other two areas and for the other mutation types</p>
+  <p class="line">makes <code>data/test/</code>, <code>data/site_*/verdicts.csv</code> and <code>patient_counts.csv</code>, <code>data/public_reference.csv</code>, and the same under <code>data/&lt;area&gt;/</code> and <code>data/other_types/</code></p>
+  <p class="line">run <code>uv run python scripts/02_simulate_hospitals.py</code>, with <code>--panel</code> for another area, and <code>scripts/02_simulate_other_types.py</code> · rules in <code>docs/data_contract.md</code> · every build self-checks against <code>config/reference_build*.json</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step done"><div class="num">3</div><div class="body">
-  <span class="pill">done</span><p class="title">Local training</p>
-  <p class="line">logistic regression, 12 scores + log frequency = 14 weights · single-site and pooled baselines</p>
-  <p class="line">test AUC 0.97-0.98 in every cell, flat · frequency cuts discordant false alarms 15 to 2 of 183</p>
-  <p class="line">run <code>uv run python scripts/03_train_local.py</code> · numbers and reading in <code>docs/step3_results.md</code></p>
+  <span class="pill">done</span><p class="title">Local training and scoring</p>
+  <p class="line">logistic regression, 12 scores + log frequency = 14 weights for heart, 17 for the other two areas · single-site and pooled baselines · test AUC 0.97 to 0.98 in every cell, flat</p>
+  <p class="line">false alarms among population-discordant harmless test variants, given no frequency, the public database, the own hospital, the federated query, the true frequency: heart 15, 7, 11, 2, 2 of 183 · cancer 12, 8, 9, 3, 3 of 100 · all panels 566, 375, 420, 110, 110 of 3,396, a first look · 200 re-simulated cohorts</p>
+  <p class="line">run <code>uv run python scripts/03_train_local.py</code> and <code>scripts/03_check_results.py</code>, with <code>--panel</code> · numbers in <code>docs/step3_results.md</code>, <code>docs/cancer_results.md</code>, <code>docs/disease_areas.md</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step done"><div class="num">4</div><div class="body">
   <span class="pill">done</span><p class="title">NVFlare: average the weights</p>
-  <p class="line">NVFlare 2.9.0 FedAvg, 20 rounds, simulator mode · 5 runs over re-dealt hospitals</p>
-  <p class="line">federated 0.9783 (0.0001) AUC vs pooled 0.9784 (0.0001) vs Oslo only 0.9781 (0.0002) · lands on pooled</p>
-  <p class="line">run <code>uv run python scripts/04_federated_train.py</code> · numbers and limits in <code>docs/step4_results.md</code></p>
+  <p class="line">NVFlare 2.9.0 FedAvg, 20 rounds, simulator mode · 5 runs over re-dealt hospitals · heart: federated 0.9783 (0.0001) AUC vs pooled 0.9784 (0.0001) vs Oslo only 0.9781 (0.0002), lands on pooled · inherited cancer, under WSL: federated 3 of 100 false alarms, the same as pooled, in every run</p>
+  <p class="line">run <code>uv run python scripts/04_federated_train.py</code>, with <code>--panel cancer</code> · numbers and limits in <code>docs/step4_results.md</code> and <code>docs/cancer_results.md</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
-<div class="step next"><div class="num">5</div><div class="body">
-  <span class="pill">next · ML side</span><p class="title">Scoring</p>
-  <p class="line">false alarms on discordant variants · model quality against site size · cost of hiding small counts</p>
+<div class="step next"><div class="num two">4b</div><div class="body">
+  <span class="pill">pending · ML side</span><p class="title">NVFlare on all panels</p>
+  <p class="line">127,618 rows, thirty times the cancer table · steps 2 and 3 have run on it, step 4 has not · the false alarms split by how each gene is inherited wait on this run · what to decide is in <code>docs/handoff_ml.md</code></p>
+</div></div>
+<div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
+
+<div class="step done"><div class="num">5</div><div class="body">
+  <span class="pill">done</span><p class="title">Quarterly replay</p>
+  <p class="line">the three hospitals grow in four equal steps; the pooled model, standing in for NVFlare, is refitted each quarter and scored on the locked test set · heart false alarms 4, 3, 2, 2 of 183 with the federated query against 9, 7, 7, 7 with the public database · Q4 is the build, byte for byte · the same replay for inherited cancer</p>
+  <p class="line">makes <code>data/quarterly/</code>, <code>docs/quarterly_replay.json</code>, which the moving picture in <code>docs/pipeline_live/</code> plays · run <code>uv run python scripts/05_quarterly_replay.py</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step done"><div class="num">6</div><div class="body">
-  <span class="pill">done · model slot empty</span><p class="title">Patient query</p>
-  <p class="line">one variant in, carrier counts from every hospital out, read with two rules · needs no model · try DSP N1526K and TTR V142I</p>
-  <p class="line">run <code>uv run python scripts/06_query_variant.py "DSP N1526K"</code> · interactive: <code>scripts/06_query_tui.py</code> · shared logic in <code>scripts/hospital_query.py</code></p>
+  <span class="pill">done</span><p class="title">Patient query</p>
+  <p class="line">one variant in, carrier counts from every hospital out, read with two rules · the line per gene: 0.1% when one bad copy is enough, 1% when both copies must be bad · the trained model's opinion on screen · for a change that cuts the protein short, how many patients carry any such change in the gene · every small mutation of the heart genes, in any valid spelling · three areas, 82,252 names</p>
+  <p class="line">run <code>uv run python scripts/06_query_variant.py "DSP N1526K"</code> · screen: <code>scripts/06_query_tui.py</code>, with <code>--panel cancer</code> · checks: <code>scripts/06_check_query_rules.py</code>, <code>scripts/06_check_other_types.py</code> · <code>docs/patient_query.md</code>, <code>docs/other_mutation_types.md</code></p>
 </div></div>
 <div class="arrow"><svg width="12" height="18"><path d="M6 0V14M2 10L6 15L10 10" fill="none" stroke="#888780" stroke-width="1.5"/></svg></div>
 
 <div class="step todo"><div class="num">7</div><div class="body">
-  <span class="pill">not started</span><p class="title">Verdict and disease shortlist</p>
-  <p class="line">frequency into the trained model · symptoms matched to diseases with the open HPO file</p>
+  <span class="pill">not started</span><p class="title">Disease shortlist</p>
+  <p class="line">symptoms matched to diseases with the open HPO file · the other half of this step as first planned, frequency into the trained model, is in step 6 now</p>
 </div></div>
 
 </div>

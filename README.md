@@ -2,6 +2,8 @@
 
 **[Try it in your browser](https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/)**: the patient query, the pipeline in motion and the manuscript as one website. The query opens first, and it is the same screen as the terminal one below.
 
+[![The pipeline in motion: data comes in, hospitals train together, a quarter passes, a doctor asks](docs/pipeline_live/pipeline.gif?v=1)](https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/#pipeline)
+
 Can hospitals help each other judge a patient's DNA variant while every patient record stays where it is?
 
 > This is a research prototype from a hackathon. The hospitals and their patients are simulated. It must not be used for patient care.
