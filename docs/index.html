@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Hello World! Federated Learning for Clinical Diagnostics</title>
+<meta name="description" content="Team 12's hackathon prototype: three simulated hospitals help each other judge a patient's DNA variant while every patient record stays where it is. The patient query, the pipeline in motion, the manuscript and the docs as tabs of one page.">
+<style>
+  /* The bar wears the colours of the patient query screen (docs/patient_query_tui.png) in both themes.
+     The docs panel and the manuscript page follow the viewer's theme. */
+  :root{
+    --bar:#1e1e1e;--bar-edge:#303030;--bar-hover:#2a2a2a;--bar-ink:#e6e6e6;--bar-muted:#8a8a8a;--blue:#5fafff;
+    --bg:#121212;--ink:#e6e6e6;--ink2:#c6c6c6;--muted:#8a8a8a;--link:#5fafff;--rule:#303030;--panel:#1a1a1a;
+    --mono:ui-monospace,"Cascadia Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){--bg:#f4f6f9;--ink:#1b1f26;--ink2:#3a414b;--muted:#5c6470;--link:#145ea8;--rule:#d7dce3;--panel:#ffffff}
+  }
+  :root[data-theme="light"]{--bg:#f4f6f9;--ink:#1b1f26;--ink2:#3a414b;--muted:#5c6470;--link:#145ea8;--rule:#d7dce3;--panel:#ffffff}
+  :root[data-theme="dark"]{--bg:#121212;--ink:#e6e6e6;--ink2:#c6c6c6;--muted:#8a8a8a;--link:#5fafff;--rule:#303030;--panel:#1a1a1a}
+
+  *{box-sizing:border-box}
+  html{height:100%;background:var(--bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  body{height:100%;margin:0;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+  [hidden]{display:none!important}
+
+  .bar{flex:0 0 auto;display:flex;align-items:stretch;gap:8px;height:44px;padding:0 16px;background:var(--bar);color:var(--bar-ink);
+       border-bottom:1px solid var(--bar-edge);font-family:var(--mono);font-size:14px;white-space:nowrap}
+  .bar a{color:inherit;text-decoration:none;display:flex;align-items:center}
+  .bar a:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+  .name{flex:0 0 auto;font-weight:700;padding-right:12px;letter-spacing:.01em}
+  .name .tail{font-weight:400;color:var(--bar-muted);margin-left:.5ch}
+  .name:hover{color:var(--blue)}
+  .tabs{flex:1 1 auto;min-width:0;display:flex;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs a{padding:0 12px;color:var(--bar-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs a:hover{color:var(--bar-ink);background:var(--bar-hover)}
+  .tabs a[aria-current="page"]{color:var(--blue);border-bottom-color:var(--blue)}
+  .popout{flex:0 0 auto;padding-left:12px;color:var(--bar-muted);font-size:12px}
+  .popout:hover{color:var(--bar-ink)}
+
+  .stage{flex:1 1 auto;min-height:0;position:relative}
+  .frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+  .docs{position:absolute;inset:0;overflow:auto;padding:28px 16px 56px;outline:none}
+  .wrap{max-width:46rem;margin:0 auto}
+  .lead{color:var(--muted);margin:0 0 24px;max-width:40rem}
+  .docs h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:28px 0 8px}
+  .docs .wrap > h2:first-of-type{margin-top:0}
+  .docs ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+  .docs li{display:grid;grid-template-columns:minmax(12rem,19rem) 1fr;gap:2px 16px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--rule)}
+  .docs li a{color:var(--link);text-decoration:none;font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
+  .docs li a:hover,.docs li a:focus-visible{text-decoration:underline}
+  .docs li span{color:var(--ink2)}
+  .docs li span a{font-family:var(--sans);font-size:inherit}
+  .docs .foot{color:var(--muted);margin:32px 0 0;font-size:13px}
+  .docs .foot a{color:var(--link);text-decoration:none}
+  .docs .foot a:hover{text-decoration:underline}
+
+  /* The bar stays one line: the name's tail goes first, then the pop-out's words, then the tabs scroll sideways. */
+  @media (max-width:1100px){.name .tail{display:none}}
+  @media (max-width:900px){.popout .word{display:none}}
+  @media (max-width:720px){.docs li{grid-template-columns:1fr}}
+  @media (max-width:480px){
+    .bar{font-size:13px;gap:4px;padding:0 12px 0 16px}
+    .name{padding-right:8px}
+    .tabs a{padding:0 9px}
+    .popout{padding-left:8px}
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="name" href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics#readme" title="The repository on GitHub">Hello World!<span class="tail">Federated Learning for Clinical Diagnostics</span></a>
+  <nav class="tabs" aria-label="Pages">
+    <a href="#query" data-tab="query">Patient query</a>
+    <a href="#pipeline" data-tab="pipeline">Pipeline in motion</a>
+    <a href="#manuscript" data-tab="manuscript">Manuscript</a>
+    <a href="#docs" data-tab="docs">Docs</a>
+  </nav>
+  <a class="popout" id="popout" href="demo/" target="_blank" rel="noopener" aria-label="Open this page in its own window"><span class="word">open in its own window</span><span aria-hidden="true"> &#8599;</span></a>
+</header>
+
+<main class="stage" id="stage">
+  <section class="docs" id="docs-panel" tabindex="-1" hidden>
+    <div class="wrap">
+      <p class="lead">The write-ups live in the repository and open on GitHub, which renders them. This site serves the patient query and the pipeline in motion, the two tabs beside this one.</p>
+
+      <h2>Start here</h2>
+      <ul>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics#readme">README</a><span>the front page: try it, the problem, the idea, how it works, what we found, the three disease areas, the patient query, limits</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/Manuscript.pdf">Manuscript.pdf</a><span>the write-up with methods, results, limits and references; also as <a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/Manuscript.md">Manuscript.md</a></span></li>
+        <li><a href="team_section_shared_manuscript.html">docs/team_section_shared_manuscript.html</a><span>the condensed story: Team 12's blocks for the shared hackathon manuscript; also as <a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/team_section_shared_manuscript.md">Markdown</a></span></li>
+      </ul>
+
+      <h2>The patient query</h2>
+      <ul>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/patient_query.md">docs/patient_query.md</a><span>what the clinician's screen shows, how every line on it is computed, the per-gene line, the model line and its proof</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/other_mutation_types.md">docs/other_mutation_types.md</a><span>the count query beyond missense, the spelling problem and the MYBPC3 demo</span></li>
+      </ul>
+
+      <h2>The results</h2>
+      <ul>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/step3_results.md">docs/step3_results.md</a><span>the model, every result table for the heart area and how to read them</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/step4_results.md">docs/step4_results.md</a><span>federated training with NVIDIA FLARE: method, the five runs and their limits</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/cancer_results.md">docs/cancer_results.md</a><span>the official inherited cancer run through steps 2, 3 and 4</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/disease_areas.md">docs/disease_areas.md</a><span>how to add a disease area, the inherited cancer and all-panels builds, the split by inheritance, what does not scale yet</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/quarterly_replay.md">docs/quarterly_replay.md</a><span>the hospitals grow quarter by quarter and the model is retrained each time</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/critical_review.md">docs/critical_review.md</a><span>a review of the code and the approach, focused on issues that could change a conclusion or a clinical claim</span></li>
+      </ul>
+
+      <h2>How it is built</h2>
+      <ul>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/build_notes.md">docs/build_notes.md</a><span>every step with example tables, the experiment grid, data sources, decisions, and how to update the pictures</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/data_contract.md">docs/data_contract.md</a><span>every file and column, and what may be trained on</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/table_columns.md">docs/table_columns.md</a><span>the variant table, column by column</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/step2_review.md">docs/step2_review.md</a><span>the sampling choices behind the simulated hospitals, and their review</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/docs/handoff_ml.md">docs/handoff_ml.md</a><span>the handoff to the ML side: what is on main, results so far, open decisions</span></li>
+        <li><a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/notebooks/federated_random_forest_colab.ipynb">notebooks/federated_random_forest_colab.ipynb</a><span>Oumaima Boussouis's Colab notebook: a random forest per hospital with soft voting, on synthetic data</span></li>
+      </ul>
+
+      <p class="foot">A research prototype from a hackathon. The hospitals and their patients are simulated. It must not be used for patient care. Code and write-ups: <a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics">the repository on GitHub</a>.</p>
+    </div>
+  </section>
+
+  <noscript>
+    <div class="docs"><div class="wrap">
+      <p class="lead">The tabs need JavaScript. The pages themselves: <a href="demo/">the patient query</a>, <a href="pipeline_live/">the pipeline in motion</a>, <a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/blob/main/Manuscript.pdf">the manuscript</a> and <a href="https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/tree/main/docs">the docs</a>.</p>
+    </div></div>
+  </noscript>
+</main>
+
+<script>
+(function () {
+  var REPO = 'https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics';
+  var PDF = REPO + '/blob/main/Manuscript.pdf';
+
+  // GitHub refuses to be shown inside a frame, so the manuscript tab is a page of this file with the links.
+  var manuscriptPage = [
+    '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<meta name="color-scheme" content="dark light"><title>Manuscript</title><style>',
+    ':root{--bg:#121212;--ink:#e6e6e6;--ink2:#c6c6c6;--muted:#8a8a8a;--link:#5fafff;--rule:#303030;--panel:#1a1a1a}',
+    '@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6f9;--ink:#1b1f26;--ink2:#3a414b;--muted:#5c6470;--link:#145ea8;--rule:#d7dce3;--panel:#ffffff}}',
+    ':root[data-theme="light"]{--bg:#f4f6f9;--ink:#1b1f26;--ink2:#3a414b;--muted:#5c6470;--link:#145ea8;--rule:#d7dce3;--panel:#ffffff}',
+    ':root[data-theme="dark"]{--bg:#121212;--ink:#e6e6e6;--ink2:#c6c6c6;--muted:#8a8a8a;--link:#5fafff;--rule:#303030;--panel:#1a1a1a}',
+    '*{box-sizing:border-box}',
+    'body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:32px 16px 48px}',
+    '.wrap{max-width:46rem;margin:0 auto;display:grid;gap:16px}',
+    'h1{font-size:1.25rem;line-height:1.35;margin:0 0 4px;text-wrap:balance}',
+    'p{margin:0;color:var(--muted)}',
+    'a.big{display:block;padding:20px 22px;border:1px solid var(--rule);border-radius:6px;background:var(--panel);color:var(--link);text-decoration:none;font-size:1.25rem;font-weight:600}',
+    'a.big:hover,a.big:focus-visible{border-color:var(--link)}',
+    'a.big small{display:block;margin-top:6px;color:var(--ink2);font-size:.9rem;font-weight:400}',
+    'a.small{color:var(--link);text-decoration:none}a.small:hover{text-decoration:underline}',
+    '</style></head><body><div class="wrap">',
+    '<h1>Hello World! Federated Learning for Clinical Diagnostics: population-aware variant classification across three simulated hospitals</h1>',
+    '<p>GitHub does not let its pages open inside another page, so the manuscript opens in a window of its own.</p>',
+    '<a class="big" href="' + PDF + '" target="_blank" rel="noopener">Open the manuscript (PDF) &#8599;<small>The write-up: methods, results across three disease areas, limits and references.</small></a>',
+    '<a class="big" href="team_section_shared_manuscript.html" target="_blank" rel="noopener">Open the team section &#8599;<small>The condensed story: Team 12\'s blocks for the shared hackathon manuscript.</small></a>',
+    '<p>The manuscript as text: <a class="small" href="' + REPO + '/blob/main/Manuscript.md" target="_blank" rel="noopener">Manuscript.md on GitHub</a>.</p>',
+    '</div></body></html>'
+  ].join('\n');
+
+  var TABS = {
+    query:      { title: 'Patient query',      src: 'demo/index.html',          open: 'demo/' },
+    pipeline:   { title: 'Pipeline in motion', src: 'pipeline_live/index.html', open: 'pipeline_live/' },
+    manuscript: { title: 'Manuscript',         srcdoc: manuscriptPage,          open: PDF },
+    docs:       { title: 'Docs',               panel: true,                     open: REPO + '/tree/main/docs' }
+  };
+
+  var stage = document.getElementById('stage');
+  var docsPanel = document.getElementById('docs-panel');
+  var popout = document.getElementById('popout');
+  var links = Array.prototype.slice.call(document.querySelectorAll('.tabs a[data-tab]'));
+  var frames = {};
+  var current = null;
+
+  function tabFromHash() {
+    var name = (location.hash || '').replace(/^#/, '');
+    return TABS.hasOwnProperty(name) ? name : 'query';
+  }
+
+  function frameFor(name) {
+    if (frames[name]) return frames[name];
+    var f = document.createElement('iframe');
+    f.className = 'frame';
+    f.title = TABS[name].title;
+    if (TABS[name].srcdoc) f.srcdoc = TABS[name].srcdoc; else f.src = TABS[name].src;
+    f.addEventListener('load', function () { if (current === name) f.focus(); });
+    stage.appendChild(f);
+    frames[name] = f;
+    return f;
+  }
+
+  function show(name) {
+    current = name;
+    for (var k in frames) if (frames.hasOwnProperty(k)) frames[k].hidden = (k !== name);
+    docsPanel.hidden = !TABS[name].panel;
+    links.forEach(function (a) {
+      if (a.getAttribute('data-tab') === name) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    popout.href = TABS[name].open;
+    if (TABS[name].panel) {
+      docsPanel.focus({ preventScroll: true });
+    } else {
+      var f = frameFor(name);
+      f.hidden = false;
+      f.focus();   // the keys go to the page inside, so the demo can be driven from the keyboard at once
+    }
+  }
+
+  window.addEventListener('hashchange', function () { show(tabFromHash()); });
+  links.forEach(function (a) {
+    // clicking the tab that is already open fires no hashchange; hand the keys to its frame anyway
+    a.addEventListener('click', function () {
+      var name = a.getAttribute('data-tab');
+      if (name === current && frames[name]) frames[name].focus();
+    });
+  });
+  show(tabFromHash());
+})();
+</script>
+</body>
+</html>
