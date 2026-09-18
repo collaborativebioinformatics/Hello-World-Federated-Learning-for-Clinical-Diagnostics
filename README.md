@@ -1,5 +1,7 @@
 ## Try it
 
+![Tally, the count courier, in its three moods: cannot tell, likely harmless, keep flagged](docs/tally_moods.png?v=1)
+
 **[Try it in your browser](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/)**: the patient query, the pipeline in motion and the manuscript as one website. The query opens first, and it is the same screen as the terminal one below.
 
 [![The pipeline in motion: data comes in, hospitals train together, a quarter passes, a doctor asks](docs/pipeline_live/pipeline.gif?v=1)](https://collaborativebioinformatics.github.io/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/#pipeline)
