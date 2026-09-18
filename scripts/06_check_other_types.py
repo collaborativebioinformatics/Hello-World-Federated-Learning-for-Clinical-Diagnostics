@@ -32,7 +32,7 @@ import pandas as pd
 
 import variant_spelling
 from hospital_query import (
-    DEFAULT_MIN_COUNT, MISSENSE, PRESUMED_HARMFUL, PRESUMED_HARMLESS, TOO_COMMON,
+    DEFAULT_MIN_COUNT, MISSENSE, PRESUMED_HARMFUL, PRESUMED_HARMLESS,
     list_sites, overview, query, _public_reference,
 )
 
@@ -97,16 +97,19 @@ def cleared_by_source(calls_by_site: dict[str, pd.DataFrame], verdict: str, type
     all_hospitals_rule_1   the same, by rule 1 alone: common among healthy patients somewhere. Rule 2
                            can take a clearance back, but it reads the counts among sick patients,
                            which are generated from the verdict. This line is free of them.
+
+    Rule 1's line is the gene's own: 0.1% when one bad copy is enough to cause disease, 1% when both
+    copies must be bad. overview() carries it in its `too_common` column.
     """
     public = pd.Series(_public_reference())
     out = {}
     for site, calls in calls_by_site.items():
         rows = calls[(calls.verdict == verdict) & (calls.mutation_type.isin(types))]
-        common_in_public = public.reindex(rows.index).fillna(0.0) >= TOO_COMMON
+        common_in_public = public.reindex(rows.index).fillna(0.0) >= rows.too_common
         cleared_public = rows[common_in_public]
         cleared_own = rows[rows.before == "LIKELY HARMLESS"]
         cleared_all = rows[rows.after == "LIKELY HARMLESS"]
-        cleared_rule_1 = rows[common_in_public | (rows.best_frequency >= TOO_COMMON)]
+        cleared_rule_1 = rows[common_in_public | (rows.best_frequency >= rows.too_common)]
         out[site] = {
             "rows": len(rows),
             "public": len(cleared_public),

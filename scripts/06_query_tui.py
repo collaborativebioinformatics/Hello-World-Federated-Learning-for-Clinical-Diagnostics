@@ -2,12 +2,15 @@
 
 Usage:
     uv run python scripts/06_query_tui.py
+    uv run python scripts/06_query_tui.py --panel cancer     # start on another disease area
 
 Needs a real terminal: Windows Terminal, the VS Code terminal, or any Mac or Linux
 terminal. It reflows when the window is resized: bars grow and shrink with the width,
-and below about 90 columns the variant picker moves above the verdict.
+below about 90 columns the variant picker moves above the verdict, and below 30 rows
+the header goes and the panels lose their blank lines. At 80 x 24 the screen scrolls.
 
-    show         dropdown: demo examples, variants whose call CHANGES once the other
+    area         dropdown: which disease area's genes and hospitals to ask. Only built areas are listed
+    show         dropdown: examples, variants whose call CHANGES once the other
                  hospitals answer, variants kept flagged, or everything
     gene         dropdown: narrow to one gene
     kind         dropdown: missense only, one of the other mutation types, or every kind.
@@ -15,12 +18,14 @@ and below about 90 columns the variant picker moves above the verdict.
     type         filter by name, or paste a DNA change in any of its valid spellings
     up / down    move through the list; the hospitals answer as you go
     Tab          move between the dropdowns, the search box and the list
+    F1 or ?      help: the keys, and what each part of the screen shows
     F2           hide counts under 5 or not, to see what privacy costs
     F3           move the patient to the next hospital
     Escape       quit
 
-The screen, top to bottom: pick a variant; the call; one chart with a row per source
-of evidence, every bar on the same axis; what crossed hospital walls.
+The screen, top to bottom: pick a variant; the call, with rule 1's line for the gene and
+the trained model's opinion; one chart with a row per source of evidence, every bar on
+the same axis; what crossed hospital walls.
 
 This file is only the app: widgets, keys and filtering.
     scripts/hospital_query.py   the logic, shared with 06_query_variant.py
@@ -29,23 +34,35 @@ This file is only the app: widgets, keys and filtering.
 
 from __future__ import annotations
 
+import argparse
+import sys
+
 import pandas as pd
 from rich.text import Text
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.events import Resize
+from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, OptionList, Select, Static
 from textual.widgets.option_list import Option
 
-from hospital_query import DEFAULT_MIN_COUNT, MISSENSE, QueryResult, examples, list_sites, overview, query, resolve
-from query_drawing import CALLS, FAINT, evidence_chart, list_row, verdict_panel, verdict_title, what_travelled_line
+from hospital_query import (
+    DEFAULT_AREA, DEFAULT_MIN_COUNT, MISSENSE, QueryResult, area_title, available_areas, build_command, examples,
+    list_sites, overview, query, resolve, set_area,
+)
+from query_drawing import (
+    CALLS, FAINT, area_label, evidence_chart, help_panel, kind_label, list_row, verdict_panel, verdict_title,
+    what_travelled_line,
+)
 
 ANY_GENE = "any gene"
 ANY_KIND = "any kind"
 DEFAULT_KIND = ANY_KIND  # the full list filters fast enough to start from every kind
 MAX_LISTED = 300  # rows put in the list at once; the counter says how many matched
 NARROW_BELOW = 90  # columns: under this, the picker sits above the verdict instead of beside it
+SHORT_BELOW = 30  # rows: under this, the header goes and the panels lose their blank lines
 CHART_CHROME = 6  # the chart panel's border and padding, in columns
 
 
@@ -77,12 +94,49 @@ def filter_variants(table: pd.DataFrame, show: str, gene: str, text: str, kind: 
     return table
 
 
+class Help(ModalScreen):
+    """The keys and what the screen shows. Any key closes it, the arrow keys scroll it first."""
+
+    DEFAULT_CSS = """
+    Help { align: center middle; background: $background 70%; }
+    Help > VerticalScroll { width: 116; max-width: 100%; height: auto; max-height: 100%;
+                            border: round $panel-lighten-2; padding: 0 2; background: $panel; }
+    """
+    SCROLL_KEYS = {"up", "down", "pageup", "pagedown", "home", "end"}
+
+    def __init__(self, sites: list[str]) -> None:
+        super().__init__()
+        self.sites = sites
+
+    def compose(self) -> ComposeResult:
+        with VerticalScroll():
+            yield Static(help_panel(self.sites))
+
+    def on_key(self, event) -> None:
+        if event.key not in self.SCROLL_KEYS:
+            event.stop()  # or Escape would go on to quit the app
+            self.dismiss()
+
+    def on_click(self) -> None:
+        self.dismiss()
+
+
+class SearchBox(Input):
+    """The search box. A ? opens the help instead of being typed, since no variant name holds one."""
+
+    def on_key(self, event) -> None:
+        if event.key == "question_mark":
+            event.prevent_default()
+            event.stop()
+            self.app.action_help()
+
+
 class PatientQuery(App):
     TITLE = "Patient query"
     SUB_TITLE = "is this patient's variant harmful? ask the other hospitals"
 
     CSS = """
-    #top { height: 13; }
+    #top { height: 15; }
     #picker { width: 34; border: round $panel-lighten-2; padding: 0 1; }
     #picker Input { border: none; height: 1; padding: 0; margin: 1 0 0 0; background: $boost; }
     #counter { height: 1; color: $text-muted; }
@@ -98,18 +152,30 @@ class PatientQuery(App):
     #what-travelled { height: 1; padding: 0 3; margin-top: 1; }
 
     Screen.narrow #top { layout: vertical; height: auto; }
-    Screen.narrow #picker { width: 1fr; height: 10; }
+    Screen.narrow #picker { width: 1fr; height: 12; }
     Screen.narrow #verdict { height: auto; padding: 0 2; }
+
+    Screen.short Header { display: none; }
+    Screen.short #top { height: 13; }
+    Screen.short #picker Input { margin: 0; }
+    Screen.short #verdict { padding: 0 2; }
+    Screen.short #what-travelled { margin-top: 0; }
+    Screen.short.narrow #top { height: auto; }
+    Screen.short.narrow #picker { height: 10; }
     """
 
     BINDINGS = [
+        ("f1", "help", "Help"),
+        Binding("question_mark", "help", "Help", show=False, priority=True),  # before the list's own type-to-search
         ("f2", "toggle_hiding", "Hide counts under 5"),
         ("f3", "move_patient", "Move the patient"),
         ("escape", "quit", "Quit"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, area: str = DEFAULT_AREA) -> None:
         super().__init__()
+        set_area(area)
+        self.area = area
         self.sites = list_sites()
         # the two settings
         self.patient_at = self.sites[0]
@@ -121,20 +187,21 @@ class PatientQuery(App):
         self.text = ""
         # what is on screen
         self.width = 118  # columns; kept up to date by on_resize
+        self.short = False  # under SHORT_BELOW rows
         self.matches: list[str] = []
         self.result: QueryResult | None = None
 
     # ------------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
-        genes = [ANY_GENE] + sorted(overview().gene.unique())
-        kinds = [ANY_KIND, MISSENSE] + sorted(set(overview().mutation_type.unique()) - {MISSENSE})
         yield Header()
         with Horizontal(id="top"):
             with Vertical(id="picker"):
+                yield Select([(area_label(area), area) for area in available_areas()], value=self.area,
+                             allow_blank=False, compact=True, id="area")
                 yield Select(self.show_options(), value=self.show, allow_blank=False, compact=True, id="show")
-                yield Select([(gene, gene) for gene in genes], value=ANY_GENE, allow_blank=False, compact=True, id="gene")
-                yield Select([(kind.replace("_", " "), kind) for kind in kinds], value=self.kind, allow_blank=False, compact=True, id="kind")
-                yield Input(placeholder="search by name, e.g. N1526")
+                yield Select(self.gene_options(), value=self.gene, allow_blank=False, compact=True, id="gene")
+                yield Select(self.kind_options(), value=self.kind, allow_blank=False, compact=True, id="kind")
+                yield SearchBox(placeholder="search by name, e.g. N1526")
                 yield Static(id="counter")
                 yield OptionList(id="matches")
             yield Static(id="verdict")
@@ -149,23 +216,37 @@ class PatientQuery(App):
         self.refresh_list()
 
     def on_resize(self, event: Resize) -> None:
-        """Reflow: stack the top row when narrow, and redraw the chart at its new width."""
+        """Reflow: stack the top row when narrow, drop the header when short, and redraw the chart at its new width."""
         self.width = event.size.width
+        self.short = event.size.height < SHORT_BELOW
         self.screen.set_class(self.width < NARROW_BELOW, "narrow")
+        self.screen.set_class(self.short, "short")
         if self.result:
-            self.draw(self.result)
+            self.call_after_refresh(self.draw, self.result)  # once the panels have their new sizes
 
-    # ------------------------------------------------------------------ the list of variants
+    def chart_width(self) -> int:
+        """The columns the chart really has: inside the panel's border and padding, minus any scrollbar."""
+        return self.query_one("#evidence", Static).content_region.width or (self.width - CHART_CHROME)
+
+    # ------------------------------------------------------------------ the dropdowns
     def show_options(self) -> list[tuple[str, str]]:
         """The 'show' dropdown, with live counts. They depend on where the patient is and on the hiding."""
         table = overview(self.patient_at, self.min_count)
         return [
-            ("demo examples", "examples"),
+            ("examples to try", "examples"),
             (f"changed by asking ({int(table.changed.sum()):,})", "changed"),
             (f"kept flagged ({int((table.after == 'KEEP FLAGGED').sum()):,})", "flagged"),
             (f"all variants ({len(table):,})", "all"),
         ]
 
+    def gene_options(self) -> list[tuple[str, str]]:
+        return [(gene, gene) for gene in [ANY_GENE] + sorted(overview().gene.unique())]
+
+    def kind_options(self) -> list[tuple[str, str]]:
+        kinds = [MISSENSE] + sorted(set(overview().mutation_type.unique()) - {MISSENSE})
+        return [(ANY_KIND, ANY_KIND)] + [(kind_label(kind), kind) for kind in kinds]
+
+    # ------------------------------------------------------------------ the list of variants
     def refresh_list(self) -> None:
         found = filter_variants(overview(self.patient_at, self.min_count), self.show, self.gene, self.text, self.kind)
         listed = found.head(MAX_LISTED)
@@ -180,9 +261,12 @@ class PatientQuery(App):
         options = self.query_one("#matches", OptionList)
         stay_on = options.highlighted or 0
         options.clear_options()
-        options.add_options([Option(list_row(name, call)) for name, call in zip(listed.name, listed.after, strict=True)])
+        options.add_options([Option(list_row(name, call, kind))
+                             for name, call, kind in zip(listed.name, listed.after, listed.mutation_type, strict=True)])
         if self.matches:
             options.highlighted = min(stay_on, len(self.matches) - 1)  # this fires variant_highlighted
+            if options.highlighted == min(stay_on, len(self.matches) - 1):
+                self.ask()  # the same row as before fires nothing, yet the answer may have changed
         else:
             self.show_nothing_found()
 
@@ -194,6 +278,9 @@ class PatientQuery(App):
     # ------------------------------------------------------------------ events
     @on(Select.Changed)
     def dropdown_changed(self, event: Select.Changed) -> None:
+        if event.select.id == "area":
+            self.switch_area(str(event.value))
+            return
         if event.select.id == "show":
             self.show = str(event.value)
         elif event.select.id == "gene":
@@ -219,6 +306,9 @@ class PatientQuery(App):
             matches.action_cursor_down() if event.key == "down" else matches.action_cursor_up()
             event.prevent_default()
 
+    def action_help(self) -> None:
+        self.push_screen(Help(self.sites))
+
     def action_toggle_hiding(self) -> None:
         self.min_count = 0 if self.min_count else DEFAULT_MIN_COUNT
         self.settings_changed()
@@ -229,9 +319,28 @@ class PatientQuery(App):
 
     def settings_changed(self) -> None:
         dropdown = self.query_one("#show", Select)
-        dropdown.set_options(self.show_options())
-        dropdown.value = self.show
+        with self.prevent(Select.Changed):
+            dropdown.set_options(self.show_options())
+            dropdown.value = self.show
         self.refresh_list()
+
+    def switch_area(self, area: str) -> None:
+        """Another disease area: its own genes, hospitals and examples. The filters start over."""
+        if area == self.area:
+            return
+        set_area(area)
+        self.area = area
+        self.sites = list_sites()
+        if self.patient_at not in self.sites:
+            self.patient_at = self.sites[0]
+        self.gene, self.kind, self.text = ANY_GENE, DEFAULT_KIND, ""
+        with self.prevent(Select.Changed, Input.Changed):
+            for select_id, options, value in (("gene", self.gene_options(), self.gene), ("kind", self.kind_options(), self.kind)):
+                dropdown = self.query_one(f"#{select_id}", Select)
+                dropdown.set_options(options)
+                dropdown.value = value
+            self.query_one(Input).value = ""
+        self.settings_changed()
 
     # ------------------------------------------------------------------ asking and drawing
     def ask(self) -> None:
@@ -243,9 +352,9 @@ class PatientQuery(App):
         verdict = self.query_one("#verdict", Static)
         verdict.set_classes(CALLS[result.after.call].css_class)
         verdict.border_title = verdict_title(result)
-        verdict.update(verdict_panel(result, self.sites))
+        verdict.update(verdict_panel(result, self.sites, compact=self.short))
 
-        self.query_one("#evidence", Static).update(evidence_chart(result, self.width - CHART_CHROME))
+        self.query_one("#evidence", Static).update(evidence_chart(result, self.chart_width()))
         self.query_one("#what-travelled", Static).update(what_travelled_line(result, self.min_count))
 
     def show_nothing_found(self) -> None:
@@ -257,5 +366,23 @@ class PatientQuery(App):
         self.query_one("#evidence", Static).update("")
 
 
+def main() -> int:
+    parser = argparse.ArgumentParser(description="The patient query, on screen")
+    parser.add_argument("--panel", default=DEFAULT_AREA, help="disease area to start on: cardiac (default) or any area built into data/<area>/")
+    args = parser.parse_args()
+
+    built = available_areas()
+    if args.panel not in built:
+        where = f" Built areas: {', '.join(built)}." if built else ""
+        print(f"The {area_title(args.panel)} area is not built.{where} Build it first:\n{build_command(args.panel)}", file=sys.stderr)
+        return 1
+    try:
+        PatientQuery(args.panel).run()
+    except FileNotFoundError as problem:
+        print(problem, file=sys.stderr)
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    PatientQuery().run()
+    raise SystemExit(main())
