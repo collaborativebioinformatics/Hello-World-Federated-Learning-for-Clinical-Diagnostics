@@ -388,6 +388,25 @@ AN  - 25684150
 ER  - 
 
 TY  - JOUR
+ID  - seal2023
+AU  - Seal, Ruth L
+AU  - Braschi, Bryony
+AU  - Gray, Kristian
+AU  - Jones, Tamsin E M
+AU  - Tweedie, Susan
+AU  - Haim-Vilmovsky, Liora
+AU  - Bruford, Elspeth A
+TI  - Genenames.org: the HGNC resources in 2023.
+PY  - 2023
+JO  - Nucleic Acids Res
+VL  - 51
+IS  - D1
+SP  - D1003-D1009
+DO  - 10.1093/nar/gkac888
+AN  - 36243972
+ER  - 
+
+TY  - JOUR
 ID  - whiffin2017
 AU  - Whiffin, Nicola
 AU  - Minikel, Eric
@@ -408,6 +427,43 @@ IS  - 10
 SP  - 1151-1158
 DO  - 10.1038/gim.2017.26
 AN  - 28518168
+ER  - 
+
+TY  - JOUR
+ID  - dendunnen2016
+AU  - den Dunnen, Johan T
+AU  - Dalgleish, Raymond
+AU  - Maglott, Donna R
+AU  - Hart, Reece K
+AU  - Greenblatt, Marc S
+AU  - McGowan-Jordan, Jean
+AU  - Roux, Anne-Francoise
+AU  - Smith, Timothy
+AU  - Antonarakis, Stylianos E
+AU  - Taschner, Peter E M
+TI  - HGVS Recommendations for the Description of Sequence Variants: 2016 Update.
+PY  - 2016
+JO  - Hum Mutat
+VL  - 37
+IS  - 6
+SP  - 564-9
+DO  - 10.1002/humu.22981
+AN  - 26931183
+ER  - 
+
+TY  - JOUR
+ID  - tan2015
+AU  - Tan, Adrian
+AU  - Abecasis, Gonçalo R
+AU  - Kang, Hyun Min
+TI  - Unified representation of genetic variants.
+PY  - 2015
+JO  - Bioinformatics
+VL  - 31
+IS  - 13
+SP  - 2202-4
+DO  - 10.1093/bioinformatics/btv112
+AN  - 25701572
 ER  - 
 
 TY  - JOUR
