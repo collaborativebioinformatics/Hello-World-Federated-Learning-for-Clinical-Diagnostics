@@ -2,7 +2,7 @@
 
 # Title
 
-Hello World! Federated Learning for Clinical Diagnostics: population-aware variant classification across three simulated hospitals
+REFLECT, Respectfully Exchanging Federated-Learning Evidence across Clinics, Together: population-aware variant classification across three simulated hospitals
 
 # Authors
 

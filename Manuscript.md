@@ -1,7 +1,7 @@
 <!-- Author order follows the README team list. Confirm order, affiliations and the bracketed placeholders before submission. -->
 <!-- Build the PDF with: uv run --with markdown python scripts/build_manuscript.py -->
 
-# Hello World! Federated Learning for Clinical Diagnostics: population-aware variant classification across three simulated hospitals
+# REFLECT, Respectfully Exchanging Federated-Learning Evidence across Clinics, Together: population-aware variant classification across three simulated hospitals
 
 Yan Li<sup>1</sup>, Mohit B. Panwar<sup>2</sup>, Shreya Srivastava<sup>3</sup>, Oumaima Boussouis<sup>4</sup>
 
