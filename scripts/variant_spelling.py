@@ -19,11 +19,20 @@ It also reports the rightmost spelling, which is the one the HGVS naming rules a
 for, and how many letters of room the change has to slide. Room above zero means the
 variant has more than one valid spelling.
 
-The reference sequence of every panel gene is downloaded once from Ensembl (GRCh38)
-into data/raw_sequence/. After that everything here runs offline.
+The reference letters come from the first of these that is on disk:
+
+    1. the whole GRCh38 genome in data/reference_genome/, fetched once by
+       scripts/00_fetch_reference_genome.py. Any position on any chromosome can then be
+       read with one file seek, and no per-gene download is needed.
+    2. the per-gene cache in data/raw_sequence/, which --fetch fills from Ensembl (GRCh38).
+       It covers the panel genes only.
+    3. Ensembl itself, for a gene that --fetch finds missing from that cache.
+
+UCSC writes repeats in lowercase. Every letter is upper-cased as it is read, so the
+sliding sees the same letters from either source.
 
 Usage:
-    uv run python scripts/variant_spelling.py --fetch          # download the sequences that are missing
+    uv run python scripts/variant_spelling.py --fetch          # download the per-gene sequences that are missing (not needed with the genome)
     uv run python scripts/variant_spelling.py --self-check     # small made-up cases, plus the real MYBPC3 pair
     uv run python scripts/variant_spelling.py "chr11:g.47332282_47332306del"
 """
@@ -31,13 +40,15 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import sys
 import time
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, lru_cache
 from pathlib import Path
+from types import ModuleType
 
 import requests
 
@@ -46,6 +57,12 @@ DATA_DIR = ROOT / "data"
 SEQUENCE_DIR = DATA_DIR / "raw_sequence"
 REGIONS_FILE = SEQUENCE_DIR / "regions.json"
 PANEL_FILE = ROOT / "config" / "cardiac_gene_panel.txt"
+
+GENOME_DIR = DATA_DIR / "reference_genome"  # written by scripts/00_fetch_reference_genome.py
+GENOME_FASTA = GENOME_DIR / "hg38.fa"
+GENOME_INDEX = GENOME_DIR / "hg38.fa.fai"
+GENOME_SCRIPT = ROOT / "scripts" / "00_fetch_reference_genome.py"
+WINDOW = 100_000  # letters of genome read in one go. A change gets at least this much room to slide on each side
 
 ENSEMBL = "https://rest.ensembl.org"
 ASSEMBLY = "GRCh38"  # the genome build that myvariant.info calls hg38
@@ -66,7 +83,7 @@ class SpellingError(ValueError):
 
 
 class NoSequence(LookupError):
-    """The change lies outside every reference sequence in data/raw_sequence/."""
+    """The change lies outside every reference sequence on disk: off the genome, or outside the panel genes when only the per-gene cache is there."""
 
 
 @dataclass(frozen=True)
@@ -224,7 +241,7 @@ def span(start: int, size: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# The reference sequence, read from the cache in data/raw_sequence/
+# The reference sequence: the whole genome when it is on disk, else the per-gene cache in data/raw_sequence/
 # ---------------------------------------------------------------------------
 class Sequence:
     """The reference letters of one stretch of a chromosome. Positions count from 1, as in the ids."""
@@ -246,6 +263,9 @@ class Sequence:
 
     @staticmethod
     def covering(chrom: str, position: int) -> Sequence:
+        """The letters around one position, from the genome when it is on disk and from the per-gene cache otherwise."""
+        if genome():
+            return genome_window(chrom, position)
         for gene, (region_chrom, start, end) in regions().items():
             if region_chrom == chrom and start <= position <= end:
                 return gene_sequence(gene)
@@ -270,6 +290,43 @@ def gene_sequence(gene: str) -> Sequence:
 
 
 # ---------------------------------------------------------------------------
+# The whole genome, read in windows through its .fai index
+# ---------------------------------------------------------------------------
+@cache
+def genome() -> ModuleType | None:
+    """scripts/00_fetch_reference_genome.py loaded as a module, or None while the genome it fetches is not on disk."""
+    if not (GENOME_FASTA.exists() and GENOME_INDEX.exists()):
+        return None
+    spec = importlib.util.spec_from_file_location("fetch_reference_genome", GENOME_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def genome_window(chrom: str, position: int) -> Sequence:
+    """The window of the genome around one position. The chromosome may be written 11, chr11 or MT."""
+    contigs = genome().load_index()
+    name = chrom if chrom in contigs else {"MT": "chrM"}.get(chrom, f"chr{chrom}")
+    if name not in contigs:
+        raise NoSequence(f"chr{chrom} is not a chromosome of the reference genome")
+    if not 1 <= position <= contigs[name].length:
+        raise NoSequence(f"chr{chrom}:{position} is off the end of the chromosome, which has {contigs[name].length:,} letters")
+    return genome_block(chrom, name, (position - 1) // WINDOW)
+
+
+@lru_cache(maxsize=32)
+def genome_block(chrom: str, name: str, block: int) -> Sequence:
+    """Block number `block` of a chromosome with a whole block on each side, so no small change reaches an edge while sliding.
+
+    Kept for the next call, because a table sorted by gene asks for the same block many times over. Upper-cased,
+    because UCSC writes repeats in lowercase and the cache in data/raw_sequence/ is all uppercase.
+    """
+    length = genome().load_index()[name].length
+    start, end = max(1, (block - 1) * WINDOW + 1), min(length, (block + 2) * WINDOW)
+    return Sequence(chrom, start, genome().read(name, start, end).upper())
+
+
+# ---------------------------------------------------------------------------
 # Download, once per gene
 # ---------------------------------------------------------------------------
 SESSION = requests.Session()
@@ -280,11 +337,14 @@ SESSION.headers["Content-Type"] = "application/json"
 def fetch_gene(gene: str, must_cover: tuple[str, int, int] | None = None, refresh: bool = False) -> str:
     """Cache the sequence of one gene, padded, and wide enough for `must_cover` = (chromosome, lowest, highest).
 
-    Returns a word for the log: cached, fetched, or not found. A cached gene needs no network.
+    Returns a word for the log: cached, genome, fetched, or not found. A cached gene needs no network, and
+    with the whole genome on disk there is nothing to download, unless `refresh` asks for Ensembl anyway.
     """
     known = read_index().get(gene)
     if known and not refresh:
         chrom, _, _, gene_start, gene_end = known
+    elif genome() and not refresh:
+        return "genome"
     else:
         found = ask_ensembl(f"/lookup/symbol/homo_sapiens/{gene}")
         if found and found.get("assembly_name") == ASSEMBLY:
@@ -301,6 +361,8 @@ def fetch_gene(gene: str, must_cover: tuple[str, int, int] | None = None, refres
     start, end = max(1, start - PADDING), end + PADDING
     if known and not refresh and known[1] <= start and known[2] >= end:
         return "cached"
+    if genome() and not refresh:
+        return "genome"  # the cache is narrower than these records need, and the genome covers them all
 
     pieces = []
     for first in range(start, end + 1, LETTERS_PER_REQUEST):
@@ -349,14 +411,20 @@ def read_gene_panel(path: Path) -> list[str]:
 def fetch_panel(refresh: bool = False) -> int:
     genes = read_gene_panel(PANEL_FILE)
     missing = []
+    from_genome = 0
     for number, gene in enumerate(genes, 1):
         outcome = fetch_gene(gene, refresh=refresh)
         chrom, start, end = regions().get(gene, ("?", 0, -1))
-        print(f"[{number:>3}/{len(genes)}] {gene:<8} {outcome:<9} chr{chrom}:{start:,}-{end:,}", flush=True)
+        where = "read from the genome when needed" if outcome == "genome" else f"chr{chrom}:{start:,}-{end:,}"
+        print(f"[{number:>3}/{len(genes)}] {gene:<8} {outcome:<9} {where}", flush=True)
         if outcome == "not found":
             missing.append(gene)
+        from_genome += outcome == "genome"
     letters = sum(end - start + 1 for _, start, end in regions().values())
     print(f"\n{len(regions())} gene sequences in {SEQUENCE_DIR.relative_to(ROOT)}, {letters:,} letters")
+    if from_genome:
+        print(f"{from_genome} genes not cached and not downloaded: {GENOME_FASTA.relative_to(ROOT)} covers every position. "
+              "--refresh downloads them from Ensembl anyway")
     if missing:
         print(f"Ensembl does not know: {', '.join(missing)}")
     return 1 if missing else 0
@@ -415,7 +483,8 @@ def self_check() -> int:
         expect("every spelling", len(every_spelling(MYBPC3_AS_DBSNP)), first.room + 1)
     except NoSequence as problem:
         failures += 1
-        print(f"  FAIL {problem}\n       Fetch the sequences first: uv run python scripts/variant_spelling.py --fetch")
+        print(f"  FAIL {problem}\n       Fetch a reference first: uv run python scripts/00_fetch_reference_genome.py, "
+              "or uv run python scripts/variant_spelling.py --fetch")
 
     print("\nself-check passed" if not failures else f"\nSELF-CHECK FAILED: {failures} wrong")
     return 1 if failures else 0
@@ -424,7 +493,9 @@ def self_check() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Give a DNA change its one canonical spelling")
     parser.add_argument("variant", nargs="?", help="an id such as chr11:g.47332282_47332306del")
-    parser.add_argument("--fetch", action="store_true", help="download the reference sequence of every panel gene")
+    parser.add_argument("--fetch", action="store_true",
+                        help="download the reference sequence of every panel gene from Ensembl. Not needed once "
+                             "scripts/00_fetch_reference_genome.py has put the whole genome in data/reference_genome/")
     parser.add_argument("--refresh", action="store_true", help="with --fetch: download again")
     parser.add_argument("--self-check", action="store_true", help="prove the sliding on cases with a known answer")
     args = parser.parse_args()
