@@ -26,7 +26,7 @@ from rich.console import Group
 from rich.table import Table
 from rich.text import Text
 
-from hospital_query import MODEL_NOT_CONNECTED, TOO_COMMON, Count, HospitalAnswer, QueryResult, is_common, is_piling_up, site_population
+from hospital_query import MISSENSE, MODEL_NOT_CONNECTED, TOO_COMMON, Count, HospitalAnswer, QueryResult, is_common, is_piling_up, site_population
 
 # ---------------------------------------------------------------------------
 # Palette
@@ -176,7 +176,7 @@ def list_row(name: str, call: str) -> Text:
 def variant_title(name: str, variant_id: str) -> Text:
     """'BAG3 C151R' as: the gene, the amino-acid change as before -> after,
     then the DNA address in parts: chromosome, position, letter before -> after."""
-    protein_change = re.fullmatch(r"(\S+) ([A-Z*])(\d+)([A-Z*]+)", name)
+    protein_change = re.fullmatch(r"(\S+) ([A-Z*])(\d+)([A-Z*]+|fs|=)", name)
     if not protein_change:
         return Text.assemble((name, f"bold {BRIGHT}"), ("   " + variant_id, FAINT))
     gene, before, place, after = protein_change.groups()
@@ -212,9 +212,21 @@ def verdict_panel(result: QueryResult, sites: list[str]) -> Group:
         Text(),
         emphasise_numbers(with_short_names(result.after.headline, sites)),
     ]
+    if result.mutation_type != MISSENSE:
+        lines.append(type_line(result))
     if result.model != MODEL_NOT_CONNECTED:
         lines.append(Text(f"trained model says: {result.model}", style=PLAIN))
     return Group(*lines)
+
+
+def type_line(result: QueryResult) -> Text:
+    """'frameshift · starts out presumed harmful' for the other mutation types. The call above can overrule it."""
+    line = Text.assemble((result.mutation_type.replace("_", " "), PLAIN))
+    if result.presumption:
+        line.append_text(Text.assemble(("  ·  ", FAINT), (result.presumption.split(",")[0], LABEL)))
+    if not result.spelling_fix:
+        line.append_text(Text.assemble(("  ·  ", FAINT), ("spelling fix off", "bold yellow")))
+    return line
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,9 @@ and below about 90 columns the variant picker moves above the verdict.
     show         dropdown: demo examples, variants whose call CHANGES once the other
                  hospitals answer, variants kept flagged, or everything
     gene         dropdown: narrow to one gene
-    type         filter by name
+    kind         dropdown: missense only, one of the other mutation types, or every kind.
+                 The other kinds exist once data/other_types/ is built
+    type         filter by name, or paste a DNA change in any of its valid spellings
     up / down    move through the list; the hospitals answer as you go
     Tab          move between the dropdowns, the search box and the list
     F2           hide counts under 5 or not, to see what privacy costs
@@ -36,19 +38,27 @@ from textual.events import Resize
 from textual.widgets import Footer, Header, Input, OptionList, Select, Static
 from textual.widgets.option_list import Option
 
-from hospital_query import DEFAULT_MIN_COUNT, QueryResult, examples, list_sites, overview, query
+from hospital_query import DEFAULT_MIN_COUNT, MISSENSE, QueryResult, examples, list_sites, overview, query, resolve
 from query_drawing import CALLS, FAINT, evidence_chart, list_row, verdict_panel, verdict_title, what_travelled_line
 
 ANY_GENE = "any gene"
+ANY_KIND = "any kind"
+DEFAULT_KIND = ANY_KIND  # the full list filters fast enough to start from every kind
 MAX_LISTED = 300  # rows put in the list at once; the counter says how many matched
 NARROW_BELOW = 90  # columns: under this, the picker sits above the verdict instead of beside it
 CHART_CHROME = 6  # the chart panel's border and padding, in columns
 
 
-def filter_variants(table: pd.DataFrame, show: str, gene: str, text: str) -> pd.DataFrame:
-    """The rows the list should hold, given the two dropdowns and the search box."""
-    # Typing or picking a gene searches everything, not just the handful of examples.
-    if show == "examples" and (text or gene != ANY_GENE):
+def filter_variants(table: pd.DataFrame, show: str, gene: str, text: str, kind: str = ANY_KIND) -> pd.DataFrame:
+    """The rows the list should hold, given the three dropdowns and the search box."""
+    # A DNA change pasted into the search box finds its variant, whatever spelling it came in.
+    if text.startswith("chr"):
+        try:
+            return table[table.name == resolve(text)[1]]
+        except LookupError:
+            return table.iloc[:0]
+    # Typing or picking a gene or a kind searches everything, not just the handful of examples.
+    if show == "examples" and (text or gene != ANY_GENE or kind != ANY_KIND):
         show = "all"
 
     if show == "examples":
@@ -60,6 +70,8 @@ def filter_variants(table: pd.DataFrame, show: str, gene: str, text: str) -> pd.
 
     if gene != ANY_GENE:
         table = table[table.gene == gene]
+    if kind != ANY_KIND:
+        table = table[table.mutation_type == kind]
     if text:
         table = table[table.name.str.lower().str.contains(text, regex=False)]
     return table
@@ -70,7 +82,7 @@ class PatientQuery(App):
     SUB_TITLE = "is this patient's variant harmful? ask the other hospitals"
 
     CSS = """
-    #top { height: 12; }
+    #top { height: 13; }
     #picker { width: 34; border: round $panel-lighten-2; padding: 0 1; }
     #picker Input { border: none; height: 1; padding: 0; margin: 1 0 0 0; background: $boost; }
     #counter { height: 1; color: $text-muted; }
@@ -102,9 +114,10 @@ class PatientQuery(App):
         # the two settings
         self.patient_at = self.sites[0]
         self.min_count = DEFAULT_MIN_COUNT
-        # the three filters
+        # the four filters
         self.show = "examples"
         self.gene = ANY_GENE
+        self.kind = DEFAULT_KIND
         self.text = ""
         # what is on screen
         self.width = 118  # columns; kept up to date by on_resize
@@ -114,11 +127,13 @@ class PatientQuery(App):
     # ------------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
         genes = [ANY_GENE] + sorted(overview().gene.unique())
+        kinds = [ANY_KIND, MISSENSE] + sorted(set(overview().mutation_type.unique()) - {MISSENSE})
         yield Header()
         with Horizontal(id="top"):
             with Vertical(id="picker"):
                 yield Select(self.show_options(), value=self.show, allow_blank=False, compact=True, id="show")
                 yield Select([(gene, gene) for gene in genes], value=ANY_GENE, allow_blank=False, compact=True, id="gene")
+                yield Select([(kind.replace("_", " "), kind) for kind in kinds], value=self.kind, allow_blank=False, compact=True, id="kind")
                 yield Input(placeholder="search by name, e.g. N1526")
                 yield Static(id="counter")
                 yield OptionList(id="matches")
@@ -152,7 +167,7 @@ class PatientQuery(App):
         ]
 
     def refresh_list(self) -> None:
-        found = filter_variants(overview(self.patient_at, self.min_count), self.show, self.gene, self.text)
+        found = filter_variants(overview(self.patient_at, self.min_count), self.show, self.gene, self.text, self.kind)
         listed = found.head(MAX_LISTED)
         self.matches = listed.name.tolist()
 
@@ -181,13 +196,16 @@ class PatientQuery(App):
     def dropdown_changed(self, event: Select.Changed) -> None:
         if event.select.id == "show":
             self.show = str(event.value)
-        else:
+        elif event.select.id == "gene":
             self.gene = str(event.value)
+        else:
+            self.kind = str(event.value)
         self.refresh_list()
 
     @on(Input.Changed)
     def search_as_you_type(self, event: Input.Changed) -> None:
-        self.text = event.value.strip().lower()
+        text = event.value.strip()
+        self.text = text if text.lower().startswith("chr") else text.lower()  # a DNA change keeps its letters
         self.refresh_list()
 
     @on(OptionList.OptionHighlighted, "#matches")

@@ -6,6 +6,12 @@ Usage:
     uv run python scripts/06_query_variant.py "DSP N1526K" --min-count 0   # no small-count hiding
     uv run python scripts/06_query_variant.py "DSP N1526K" --json          # for other programs
 
+Any small mutation can be asked about once data/other_types/ is built, by name or by DNA change
+in any valid spelling. The MYBPC3 deletion filed under two ids shows why the spelling matters:
+
+    uv run python scripts/06_query_variant.py "chr11:g.47332282_47332306del" --patient-at site_karachi
+    uv run python scripts/06_query_variant.py "chr11:g.47332282_47332306del" --patient-at site_karachi --no-spelling-fix
+
 The interactive version is scripts/06_query_tui.py. Both use scripts/hospital_query.py,
 which explains what runs inside each hospital and what runs where the patient is.
 """
@@ -21,7 +27,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from hospital_query import DEFAULT_MIN_COUNT, QueryResult, Reading, examples, query
+import variant_spelling
+from hospital_query import DEFAULT_MIN_COUNT, MISSENSE, QueryResult, Reading, examples, query
 
 CALL_COLOURS = {"LIKELY HARMLESS": "green", "KEEP FLAGGED": "red", "FREQUENCY SAYS NOTHING": "yellow"}
 
@@ -32,6 +39,8 @@ def main() -> int:
     parser.add_argument("--patient-at", help="the hospital the patient is at (default: the first one)")
     parser.add_argument("--min-count", type=int, default=DEFAULT_MIN_COUNT, help="hospitals hide counts below this")
     parser.add_argument("--json", action="store_true", help="print the result as data")
+    parser.add_argument("--no-spelling-fix", action="store_true",
+                        help="send the text as typed, and let each hospital match it against its own lab's spelling only")
     args = parser.parse_args()
 
     if hasattr(sys.stdout, "reconfigure"):
@@ -42,7 +51,7 @@ def main() -> int:
         console.print("Give a variant name. Good ones to try: " + ", ".join(f'"{name}"' for name in examples()))
         return 1
     try:
-        result = query(args.variant, args.patient_at, args.min_count)
+        result = query(args.variant, args.patient_at, args.min_count, spelling_fix=not args.no_spelling_fix)
     except (LookupError, ValueError, FileNotFoundError) as problem:
         console.print(f"[red]{problem}[/red]")
         return 1
@@ -58,6 +67,11 @@ def show(console: Console, result: QueryResult) -> None:
     console.print()
     console.print(f"[bold]{result.name}[/bold]   [dim]{result.variant_id}[/dim]")
     console.print(f"patient at {result.patient_at} · public database (Europeans only): {result.public_frequency:.2%}")
+    if result.mutation_type != MISSENSE:
+        console.print(f"mutation type: {result.mutation_type.replace('_', ' ')}" + spellings_line(result))
+    if not result.spelling_fix:
+        console.print(f"[yellow]spelling fix off: every hospital was asked for '{result.asked_as}' and matched it "
+                      "against its own lab's spelling only[/yellow]")
     console.print()
 
     table = Table(title="what each hospital answered", title_justify="left", title_style="dim")
@@ -77,6 +91,15 @@ def show(console: Console, result: QueryResult) -> None:
     console.print(f"model: {result.model}")
     console.print("[dim]only counts left each hospital[/dim]")
     console.print()
+
+
+def spellings_line(result: QueryResult) -> str:
+    """' · one change, 8 valid spellings' for an insertion or deletion that can slide; nothing otherwise."""
+    try:
+        ways = variant_spelling.every_spelling(result.variant_id)
+    except (variant_spelling.SpellingError, variant_spelling.NoSequence):
+        return ""
+    return f" · one change, {len(ways)} valid spellings" if len(ways) > 1 else ""
 
 
 def reading_panel(title: str, reading: Reading) -> Panel:
