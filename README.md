@@ -46,7 +46,7 @@ about is the one whose ancestry the hospital rarely sees, a South Asian or Afric
 arrives at Oslo. All three models are told the same thing about frequency, so the only difference
 between them is how they were trained.
 
-![Two panels over twelve clinical specialties. Panel A, AUC on variants of South Asian or African ancestry patients seen at Oslo, has the three lines on top of each other in every specialty. Panel B, false alarms among population-discordant benign variants, separates them: Oslo training alone is above federated and pooled in ten of the twelve specialties and level in the other two, by about a third in neurology and metabolic disease](docs/disease_areas_figure.png?v=2)
+![Two panels over twelve clinical specialties. Panel A, AUC on variants of South Asian or African ancestry patients seen at Oslo, has the three lines on top of each other in every specialty. Panel B, false alarms among population-discordant benign variants, separates them: Oslo training alone is above federated and pooled in ten of the twelve specialties and level in the other two, by about a third in neurology and metabolic disease](docs/disease_areas_figure.png?v=3)
 
 - **Federated training cost nothing in ranking, in any of the twelve.** The three lines in panel A sit
   within 0.002 AUC of each other, and which one is on top changes from specialty to specialty.
