@@ -37,7 +37,14 @@
   .tabs::-webkit-scrollbar{display:none}
   .tabs a{padding:0 12px;color:var(--bar-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
   .tabs a:hover{color:var(--bar-ink);background:var(--bar-hover)}
-  .tabs a[aria-current="page"]{color:var(--blue);border-bottom-color:var(--blue)}
+  .tabs a{--tint:#5fafff}
+  .tabs a[data-tab="pipeline"]{--tint:#5fafff}
+  .tabs a[data-tab="query"]{--tint:#8fd14f}
+  .tabs a[data-tab="manuscript"]{--tint:#d9a6ff}
+  .tabs a[data-tab="docs"]{--tint:#7fd6d0}
+  .tabs a{color:color-mix(in srgb,var(--tint) 55%,var(--bar-muted));border-bottom-color:color-mix(in srgb,var(--tint) 35%,transparent)}
+  .tabs a:hover{color:var(--tint)}
+  .tabs a[aria-current="page"]{color:var(--tint);border-bottom-color:var(--tint);background:color-mix(in srgb,var(--tint) 12%,transparent)}
   .popout{flex:0 0 auto;padding-left:12px;color:var(--bar-muted);font-size:12px}
   .popout:hover{color:var(--bar-ink)}
 
@@ -73,12 +80,12 @@
 <header class="bar">
   <a class="name" href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together#readme" title="REFLECT: Respectfully Exchanging Federated-Learning Evidence across Clinics, Together. The repository on GitHub">Repo<span class="out">&#8599;</span></a>
   <nav class="tabs" aria-label="Pages">
-    <a href="#query" data-tab="query">Patient query</a>
     <a href="#pipeline" data-tab="pipeline">Pipeline in motion</a>
+    <a href="#query" data-tab="query">Patient query</a>
     <a href="#manuscript" data-tab="manuscript">Manuscript</a>
     <a href="#docs" data-tab="docs">Docs</a>
   </nav>
-  <a class="popout" id="popout" href="demo/" target="_blank" rel="noopener" aria-label="Open this page in its own window"><span class="word">open in its own window</span><span aria-hidden="true"> &#8599;</span></a>
+  <a class="popout" id="popout" href="pipeline_live/" target="_blank" rel="noopener" aria-label="Open this page in its own window"><span class="word">open in its own window</span><span aria-hidden="true"> &#8599;</span></a>
 </header>
 
 <main class="stage" id="stage">
@@ -177,7 +184,7 @@
 
   function tabFromHash() {
     var name = (location.hash || '').replace(/^#/, '');
-    return TABS.hasOwnProperty(name) ? name : 'query';
+    return TABS.hasOwnProperty(name) ? name : 'pipeline';
   }
 
   function frameFor(name) {
