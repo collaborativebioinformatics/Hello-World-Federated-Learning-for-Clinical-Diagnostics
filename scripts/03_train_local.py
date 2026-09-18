@@ -26,9 +26,13 @@ Reads   data/site_*/verdicts.csv       one hospital's private labelled variants
 Writes  data/results_local.json        every number this prints
         docs/step3_results.md          the same, as tables
 
+With --panel NAME every path above sits under data/NAME/ instead. `cardiac` is
+the default and keeps the top of data/, the rule step 1 follows.
+
 Usage:
     uv run python scripts/03_train_local.py
-    uv run python scripts/03_train_local.py --self-check   # the maths, against brute force
+    uv run python scripts/03_train_local.py --panel cancer   # another disease area, from data/cancer/
+    uv run python scripts/03_train_local.py --self-check     # the maths, against brute force
 """
 
 from __future__ import annotations
@@ -43,6 +47,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
+DEFAULT_PANEL = "cardiac"
 SITES = ["site_oslo", "site_karachi", "site_lagos"]
 
 # Dropped: polyphen2_hdiv, missing for 29-32% of training rows. The remaining
@@ -186,6 +191,11 @@ def evidence_columns(test: pd.DataFrame) -> dict[str, np.ndarray]:
 
 
 # ---------------------------------------------------------------------------
+def data_dir(panel: str) -> Path:
+    """The cardiac build keeps its place at the top of data/. Every other panel gets data/<panel>/, as in step 1."""
+    return ROOT / "data" if panel == DEFAULT_PANEL else ROOT / "data" / panel
+
+
 def load() -> tuple[dict[str, pd.DataFrame], pd.DataFrame, list[str]]:
     columns = json.loads((DATA_DIR / "columns.json").read_text())
     score_columns = [c for c in columns["features"] if c not in DROP_FEATURES]
@@ -198,7 +208,7 @@ def load() -> tuple[dict[str, pd.DataFrame], pd.DataFrame, list[str]]:
 
 def main() -> int:
     if not (DATA_DIR / "test" / "variants.csv").exists():
-        print("data/test/ is missing. Run scripts/02_simulate_hospitals.py first.", file=sys.stderr)
+        print(f"{(DATA_DIR / 'test').relative_to(ROOT).as_posix()}/ is missing. Run scripts/02_simulate_hospitals.py first, with the same --panel.", file=sys.stderr)
         return 1
     np.random.seed(SEED)
     hospitals, test, score_columns = load()
@@ -304,13 +314,13 @@ def main() -> int:
     test_scores_only = features(test, score_columns, np.zeros(len(test)))[:, :-1]
     probability = predict(test_scores_only, scores_only_w)
     hits = int((probability[benign_discordant] >= scores_only_cut).sum())
-    print(f"  {'12 scores, no frequency at all':<34}{roc_auc(label, probability):>8.3f}"
+    print(f"  {f'{len(score_columns)} scores, no frequency at all':<34}{roc_auc(label, probability):>8.3f}"
           f"{f'{hits} / {int(benign_discordant.sum())}':>26}")
     results["ablation"] = {"scores_only": {"auc": roc_auc(label, probability), "false_alarms": hits}}
     for source_name in ("public", "federated_query"):
         probability = predict(features(test, score_columns, evidence[source_name]), weights)
         hits = int((probability[benign_discordant] >= cut).sum())
-        print(f"  {'12 scores + ' + source_name + ' frequency':<34}{roc_auc(label, probability):>8.3f}"
+        print(f"  {f'{len(score_columns)} scores + {source_name} frequency':<34}{roc_auc(label, probability):>8.3f}"
               f"{f'{hits} / {int(benign_discordant.sum())}':>26}")
         results["ablation"][source_name] = {"auc": roc_auc(label, probability), "false_alarms": hits}
 
@@ -371,5 +381,8 @@ def self_check() -> int:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a logistic regression per hospital and score it")
+    parser.add_argument("--panel", default=DEFAULT_PANEL, help="disease area: data/ for cardiac, data/<panel>/ for any other (default: cardiac)")
     parser.add_argument("--self-check", action="store_true", help="test the maths, no data needed")
-    raise SystemExit(self_check() if parser.parse_args().self_check else main())
+    args = parser.parse_args()
+    DATA_DIR = data_dir(args.panel)
+    raise SystemExit(self_check() if args.self_check else main())

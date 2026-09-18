@@ -18,10 +18,12 @@ Writes  data/results_checks.json   every number this prints
 
 Usage:
     uv run python scripts/03_check_results.py
+    uv run python scripts/03_check_results.py --panel cancer   # another disease area, from data/cancer/
 """
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 from pathlib import Path
@@ -72,8 +74,11 @@ def summarise(counts: list[int]) -> dict[str, int]:
     return {"median": int(np.median(counts)), "lowest": int(min(counts)), "highest": int(max(counts))}
 
 
-def main() -> int:
+def main(panel: str) -> int:
+    global DATA_DIR
     step3 = load_step3()
+    # Step 3's load() and evidence_columns() read from its own DATA_DIR, so both scripts follow the same panel.
+    DATA_DIR = step3.DATA_DIR = step3.data_dir(panel)
     hospitals, test, score_columns = step3.load()
     evidence = step3.evidence_columns(test)
     label = test.label.to_numpy()
@@ -206,4 +211,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = argparse.ArgumentParser(description="Check how sturdy the step 3 headline is, and what it costs")
+    parser.add_argument("--panel", default="cardiac", help="disease area: data/ for cardiac, data/<panel>/ for any other (default: cardiac)")
+    raise SystemExit(main(parser.parse_args().panel))

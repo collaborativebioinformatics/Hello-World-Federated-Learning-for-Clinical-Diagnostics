@@ -133,6 +133,15 @@ Two things change from one disease area to the next. Both are recorded in files,
 - The `features` list in `columns.json` is decided per table by the 30% missing rule. The heart table recommends 13 score columns and the cancer table recommends 16. The 13 heart columns are all among the 16.
 - The demo variants. `DSP N1526K` is a heart variant and is absent from the cancer table. Candidates for cancer are listed in [disease_areas.md](disease_areas.md).
 
-**What a script needs to read it.** The step 6 query now takes `--panel`. Today steps 2, 3 and 4 each have their own line `DATA_DIR = ROOT / "data"`, and every path they read or write hangs off that line. A suggestion for the ML side, which has not been made: give each script a `--panel` flag with default `cardiac`, and set `DATA_DIR` to `ROOT / "data"` for `cardiac` and to `ROOT / "data" / panel` for anything else. That is the rule `table_folder()` follows in `scripts/01_build_table.py`. Step 2 would also need one reference file per panel, for example `config/reference_build_<panel>.json`, because `config/reference_build.json` holds the heart fingerprints.
+**Reading it from steps 2 to 4 and the query.** Steps 2, 3 and 4, the step 3 check and the step 6 query take the same `--panel NAME` flag as steps 0 and 1, default `cardiac`. Each one sets its `DATA_DIR` to `data/` for `cardiac` and to `data/<panel>/` for anything else, the rule `table_folder()` follows in `scripts/01_build_table.py`, and every path it reads or writes hangs off that line. The whole cancer pipeline after step 1 is:
 
-As a trial, steps 2 and 3 were loaded unchanged from a throwaway script with only `DATA_DIR` pointed at `data/cancer/`. Both ran to the end and every self-check in step 2 passed. The numbers are in [disease_areas.md](disease_areas.md).
+```
+uv run python scripts/02_simulate_hospitals.py --panel cancer
+uv run python scripts/03_train_local.py --panel cancer
+uv run python scripts/03_check_results.py --panel cancer
+uv run python scripts/04_federated_train.py --panel cancer
+```
+
+Step 2 keeps one reference build per panel: `config/reference_build.json` holds the heart fingerprints and `config/reference_build_<panel>.json` any other panel's, so the cancer ones are in `config/reference_build_cancer.json`, and `--set-reference` writes the file of the panel it was given. Step 4 keeps its workspace under `data/<panel>/fedavg_runs/` and writes `data/<panel>/results_federated.json`. The NVFlare client script reads only the run folder step 4 hands it, so it needed no change. NVFlare's simulator did not start under Windows Python on the laptop this was built on, whatever the panel, so the cancer step 4 was run in WSL Ubuntu from the same checkout; the details are in [cancer_results.md](cancer_results.md). The step 6 query scripts were not changed and still read the heart build at the top of `data/`.
+
+With no `--panel`, steps 2, 3 and 4 write the same bytes as before: the SHA256 of every file they write was compared with the heart build made before the change, and step 2 still reports the heart build identical to the team's reference. The cancer results are in [cancer_results.md](cancer_results.md).

@@ -27,6 +27,7 @@ population. --self-check proves those checks can still fail.
 
 Usage:
     uv run python scripts/02_simulate_hospitals.py
+    uv run python scripts/02_simulate_hospitals.py --panel cancer    # another disease area, from data/cancer/
     uv run python scripts/02_simulate_hospitals.py --set-reference   # declare this build the team's reference
     uv run python scripts/02_simulate_hospitals.py --self-check      # break the build on purpose, expect a stop
 
@@ -34,6 +35,10 @@ The seed is fixed, so everyone who starts from the same data/variants.csv gets
 byte-identical files. The script says whether your build matches the team's
 reference in config/reference_build.json. It can differ only if myvariant.info
 has updated its data since the reference was made.
+
+`cardiac` is the default panel and keeps the top of data/. Any other panel reads
+data/<panel>/variants.csv, writes the same files into data/<panel>/ and keeps its
+own reference in config/reference_build_<panel>.json, the rule step 1 follows.
 
 What every file and column means, and which columns may be trained on:
 docs/data_contract.md
@@ -55,6 +60,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 REFERENCE_BUILD = ROOT / "config" / "reference_build.json"
+DEFAULT_PANEL = "cardiac"
 
 SEED = 12  # same seed, same hospitals
 
@@ -257,7 +263,7 @@ def check(test: pd.DataFrame, hospitals: dict[str, pd.DataFrame]) -> None:
         assert closest == f"af_{site.population}", f"{name} af_local looks like {closest}, not its own population"
 
 
-def self_check() -> int:
+def self_check(panel: str) -> int:
     """Prove check() is not vacuous, by breaking the plumbing and expecting a stop.
 
     An assertion that cannot fail is worse than none: it reads like a guarantee.
@@ -272,7 +278,7 @@ def self_check() -> int:
     honest = simulate_patient_counts
     simulate_patient_counts = lambda table, site, rng: honest(table, SITES["site_lagos"], rng)
     try:
-        main([])   # [] so the flag is not re-read and this does not recurse
+        main(["--panel", panel])   # without --self-check, so this does not recurse
         passed = False
     except AssertionError as caught:
         print(f"\nself-check passed: the broken build was stopped with {caught}")
@@ -281,7 +287,7 @@ def self_check() -> int:
         simulate_patient_counts = honest
 
     print("\nrebuilding the real hospitals, since the broken run overwrote them\n")
-    main([])
+    main(["--panel", panel])
     if passed:
         return 0
     print("SELF-CHECK FAILED: every hospital was given Lagos's cohort and check() said nothing.", file=sys.stderr)
@@ -300,13 +306,23 @@ def fingerprint(files: list[Path]) -> str:
     return digest.hexdigest()[:16]
 
 
+def data_dir(panel: str) -> Path:
+    """The cardiac build keeps its place at the top of data/. Every other panel gets data/<panel>/, as in step 1."""
+    return ROOT / "data" if panel == DEFAULT_PANEL else ROOT / "data" / panel
+
+
+def reference_file(panel: str) -> Path:
+    """One reference build per panel. The cardiac one keeps its old name."""
+    return ROOT / "config" / ("reference_build.json" if panel == DEFAULT_PANEL else f"reference_build_{panel}.json")
+
+
 def compare_with_reference(build: dict, set_reference: bool) -> None:
     if set_reference:
         REFERENCE_BUILD.write_text(json.dumps({"made_on": str(date.today()), **build}, indent=2) + "\n", encoding="utf-8")
         print(f"\nThis build is now the team's reference: {REFERENCE_BUILD.relative_to(ROOT)}. Commit that file.")
         return
     if not REFERENCE_BUILD.exists():
-        print("\nNo reference build yet. Run once with --set-reference and commit config/reference_build.json.")
+        print(f"\nNo reference build yet. Run once with --set-reference and commit {REFERENCE_BUILD.relative_to(ROOT).as_posix()}.")
         return
 
     reference = json.loads(REFERENCE_BUILD.read_text(encoding="utf-8"))
@@ -327,15 +343,18 @@ def compare_with_reference(build: dict, set_reference: bool) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Lock a test set and simulate three hospitals")
+    parser.add_argument("--panel", default=DEFAULT_PANEL, help="disease area: data/ for cardiac, data/<panel>/ for any other (default: cardiac)")
     parser.add_argument("--set-reference", action="store_true", help="declare this build the team's reference")
     parser.add_argument("--self-check", action="store_true", help="prove the safety checks can actually fail")
     args = parser.parse_args(argv)
     if args.self_check:
-        return self_check()
+        return self_check(args.panel)
 
+    global DATA_DIR, REFERENCE_BUILD
+    DATA_DIR, REFERENCE_BUILD = data_dir(args.panel), reference_file(args.panel)
     table_file = DATA_DIR / "variants.csv"
     if not table_file.exists():
-        print("data/variants.csv is missing. Run scripts/01_build_table.py first.", file=sys.stderr)
+        print(f"{table_file.relative_to(ROOT).as_posix()} is missing. Run scripts/01_build_table.py first, with the same --panel.", file=sys.stderr)
         return 1
     table = pd.read_csv(table_file)
     rng = np.random.default_rng(SEED)
@@ -389,7 +408,7 @@ def main(argv: list[str] | None = None) -> int:
     run["build"] = build
     (DATA_DIR / "sites.json").write_text(json.dumps(run, indent=2), encoding="utf-8")
     print_example(table, "DSP N1526K")
-    print(f"\nwrote data/test/, data/public_reference.csv, data/sites.json and {len(SITES)} hospital folders")
+    print(f"\nwrote {DATA_DIR.relative_to(ROOT).as_posix()}/: test/, public_reference.csv, sites.json and {len(SITES)} hospital folders")
     compare_with_reference(build, args.set_reference)
     return 0
 

@@ -23,8 +23,12 @@ data/ is never modified: each run writes its own hospitals under a workspace.
 Writes  data/results_federated.json
         docs/step4_results.md
 
+With --panel NAME the hospitals, the test set, the workspace and the results all
+sit under data/NAME/ instead. `cardiac` is the default and keeps the top of data/.
+
 Usage:
     uv run python scripts/04_federated_train.py
+    uv run python scripts/04_federated_train.py --panel cancer         # another disease area, from data/cancer/
     uv run python scripts/04_federated_train.py --runs 2 --rounds 5   # a quick smoke test
 """
 
@@ -147,10 +151,16 @@ def evaluate(weights: np.ndarray, test: pd.DataFrame, score_columns: list[str],
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="NVFlare FedAvg against single-site and pooled")
+    parser.add_argument("--panel", default=step3.DEFAULT_PANEL, help="disease area: data/ for cardiac, data/<panel>/ for any other (default: cardiac)")
     parser.add_argument("--runs", type=int, default=RUNS)
     parser.add_argument("--rounds", type=int, default=ROUNDS)
     parser.add_argument("--keep", action="store_true", help="keep each run's workspace for inspection")
     args = parser.parse_args()
+
+    # Step 3's evidence_columns() reads the patient counts from its own DATA_DIR, so both scripts follow the same panel.
+    global DATA_DIR, WORKSPACE
+    DATA_DIR = step3.DATA_DIR = step3.data_dir(args.panel)
+    WORKSPACE = DATA_DIR / "fedavg_runs"
 
     columns = json.loads((DATA_DIR / "columns.json").read_text())
     score_columns = [c for c in columns["features"] if c not in step3.DROP_FEATURES]
@@ -259,8 +269,8 @@ def main() -> int:
     for metric, label_text, fmt in [
         ("auc_public", "AUC, public frequency", ".4f"),
         ("auc_federated_query", "AUC, federated count query", ".4f"),
-        (f"false_alarms_public", "false alarms / 183, public frequency", ".1f"),
-        (f"false_alarms_federated_query", "false alarms / 183, federated counts", ".1f"),
+        (f"false_alarms_public", f"false alarms / {int(discordant_benign.sum())}, public frequency", ".1f"),
+        (f"false_alarms_federated_query", f"false alarms / {int(discordant_benign.sum())}, federated counts", ".1f"),
     ]:
         print(label_text)
         for arm in arms:
@@ -281,7 +291,7 @@ def main() -> int:
             mean, std = summarise(arm, f"auc_pop_{population}")
             cells.append(f"{mean:.4f} ({std:.4f})")
         print(f"  {title[arm]:<28}" + "".join(f"{c:>16}" for c in cells))
-    print("  12 and 23 pathogenic rows carry an AUC interval wider than any effect here.")
+    print(f"  {population_rows['afr'][1]} and {population_rows['sas'][1]} pathogenic rows carry an AUC interval wider than any effect here.")
     print("  'none' is the two thirds of the test set gnomAD never saw in any of the three.\n")
 
     # ---- the non-IID question, paired ----
