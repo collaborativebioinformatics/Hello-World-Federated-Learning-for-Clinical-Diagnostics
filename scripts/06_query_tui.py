@@ -21,15 +21,19 @@ the header goes and the panels lose their blank lines. At 80 x 24 the screen scr
     F1 or ?      help: the keys, and what each part of the screen shows
     F2           hide counts under 5 or not, to see what privacy costs
     F3           move the patient to the next hospital
+    F4           show or hide Tally, the count courier in the corner (on by default,
+                 remembered for the session; a window under 30 rows has no room for it)
     Escape       quit
 
 The screen, top to bottom: pick a variant; the call, with rule 1's line for the gene and
 the trained model's opinion; one chart with a row per source of evidence, every bar on
-the same axis; what crossed hospital walls.
+the same axis; what crossed hospital walls; and Tally, bottom right, who sets off when a
+query runs, comes back with the number, reacts to the call and then stands idle.
 
 This file is only the app: widgets, keys and filtering.
     scripts/hospital_query.py   the logic, shared with 06_query_variant.py
     scripts/query_drawing.py    how everything looks
+    scripts/mascot.py           Tally's frames and when each shows
 """
 
 from __future__ import annotations
@@ -48,12 +52,13 @@ from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, OptionList, Select, Static
 from textual.widgets.option_list import Option
 
+import mascot
 from hospital_query import (
     DEFAULT_AREA, DEFAULT_MIN_COUNT, MISSENSE, QueryResult, area_title, available_areas, build_command, examples,
     list_sites, overview, query, resolve, set_area,
 )
 from query_drawing import (
-    CALLS, FAINT, area_label, evidence_chart, help_panel, kind_label, list_row, verdict_panel, verdict_title,
+    CALLS, FAINT, area_label, evidence_chart, help_panel, kind_label, list_row, percent, verdict_panel, verdict_title,
     what_travelled_line,
 )
 
@@ -150,6 +155,9 @@ class PatientQuery(App):
 
     #evidence { height: auto; border: round $panel-lighten-2; padding: 0 2; }
     #what-travelled { height: 1; padding: 0 3; margin-top: 1; }
+    #mascot-row { height: 4; padding: 0 3; margin-top: 1; align-horizontal: right; }
+    #mascot { width: 40; height: 4; }
+    #mascot-row.hidden { display: none; }
 
     Screen.narrow #top { layout: vertical; height: auto; }
     Screen.narrow #picker { width: 1fr; height: 12; }
@@ -160,6 +168,7 @@ class PatientQuery(App):
     Screen.short #picker Input { margin: 0; }
     Screen.short #verdict { padding: 0 2; }
     Screen.short #what-travelled { margin-top: 0; }
+    Screen.short #mascot-row { display: none; }
     Screen.short.narrow #top { height: auto; }
     Screen.short.narrow #picker { height: 10; }
     """
@@ -169,6 +178,7 @@ class PatientQuery(App):
         Binding("question_mark", "help", "Help", show=False, priority=True),  # before the list's own type-to-search
         ("f2", "toggle_hiding", "Hide counts under 5"),
         ("f3", "move_patient", "Move the patient"),
+        ("f4", "toggle_mascot", mascot.NAME),
         ("escape", "quit", "Quit"),
     ]
 
@@ -190,6 +200,11 @@ class PatientQuery(App):
         self.short = False  # under SHORT_BELOW rows
         self.matches: list[str] = []
         self.result: QueryResult | None = None
+        # Tally: ticks since the last query decide the pose; hold pins them (for pictures and checks)
+        self.mascot_since = 0
+        self.mascot_hold: int | None = None
+        self.mascot_shown = True
+        self.mascot_drawn = ""
 
     # ------------------------------------------------------------------ layout
     def compose(self) -> ComposeResult:
@@ -207,6 +222,8 @@ class PatientQuery(App):
             yield Static(id="verdict")
         yield Static(id="evidence")
         yield Static(id="what-travelled")
+        with Horizontal(id="mascot-row"):
+            yield Static(id="mascot")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -214,6 +231,7 @@ class PatientQuery(App):
         self.query_one("#evidence").border_title = "how common is it?"
         self.query_one(Input).focus()  # so typing searches and the arrow keys move the list straight away
         self.refresh_list()
+        self.set_interval(1 / mascot.FPS, self.mascot_tick)
 
     def on_resize(self, event: Resize) -> None:
         """Reflow: stack the top row when narrow, drop the header when short, and redraw the chart at its new width."""
@@ -221,8 +239,14 @@ class PatientQuery(App):
         self.short = event.size.height < SHORT_BELOW
         self.screen.set_class(self.width < NARROW_BELOW, "narrow")
         self.screen.set_class(self.short, "short")
+        self.refresh_bindings()  # the F4 hint goes with the mascot when the window is short
         if self.result:
             self.call_after_refresh(self.draw, self.result)  # once the panels have their new sizes
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "toggle_mascot" and self.short:
+            return False  # no room for Tally: no key for it either, and the footer stays as it was
+        return True
 
     def chart_width(self) -> int:
         """The columns the chart really has: inside the panel's border and padding, minus any scrollbar."""
@@ -317,6 +341,10 @@ class PatientQuery(App):
         self.patient_at = self.sites[(self.sites.index(self.patient_at) + 1) % len(self.sites)]
         self.settings_changed()
 
+    def action_toggle_mascot(self) -> None:
+        self.mascot_shown = not self.mascot_shown
+        self.query_one("#mascot-row").set_class(not self.mascot_shown, "hidden")
+
     def settings_changed(self) -> None:
         dropdown = self.query_one("#show", Select)
         with self.prevent(Select.Changed):
@@ -356,6 +384,7 @@ class PatientQuery(App):
 
         self.query_one("#evidence", Static).update(evidence_chart(result, self.chart_width()))
         self.query_one("#what-travelled", Static).update(what_travelled_line(result, self.min_count))
+        self.restart_mascot()
 
     def show_nothing_found(self) -> None:
         self.result = None
@@ -364,6 +393,37 @@ class PatientQuery(App):
         verdict.border_title = ""
         verdict.update(Text("no variant matches", style=FAINT))
         self.query_one("#evidence", Static).update("")
+        self.restart_mascot()
+
+    # ------------------------------------------------------------------ Tally, the count courier
+    def restart_mascot(self) -> None:
+        """A query just ran: Tally sets off again. Unless held still, for a picture or a check."""
+        if self.mascot_hold is None:
+            self.mascot_since = 0
+        self.draw_mascot()
+
+    def mascot_tick(self) -> None:
+        if self.mascot_hold is None:
+            self.mascot_since += 1
+            self.draw_mascot()
+
+    def hold_mascot(self, since: int | None) -> None:
+        """Pin Tally at this many ticks after a query, so that a picture or a check sees one fixed frame;
+        None lets it move again. The web demo's TERM.mascotHold() does the same."""
+        self.mascot_hold = since
+        if since is not None:
+            self.mascot_since = since
+        self.draw_mascot()
+
+    def draw_mascot(self) -> None:
+        """Only redraw when the frame changed: most ticks change nothing."""
+        call = self.result.after.call if self.result else None
+        number = percent(self.result.best_frequency) if self.result else ""
+        text = mascot.render(self.mascot_since, call, number)
+        key = f"{call}|{number}|{text.plain}|{mascot.pose(self.mascot_since, call)}"
+        if key != self.mascot_drawn:
+            self.mascot_drawn = key
+            self.query_one("#mascot", Static).update(text)
 
 
 def main() -> int:

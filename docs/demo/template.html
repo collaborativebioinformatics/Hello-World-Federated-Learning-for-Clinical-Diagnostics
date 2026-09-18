@@ -13,7 +13,8 @@
   a 120 x 40 character grid rendered the way Textual exports a screenshot (background rectangles and
   runs of text with a fixed length per character), with the same widgets, colours, words and keys.
   The two rules are in the demo-logic script and mirror scripts/hospital_query.py line for line;
-  the drawing mirrors scripts/query_drawing.py.
+  the drawing mirrors scripts/query_drawing.py. Tally, the count courier in the corner, comes with
+  the data frame for frame from scripts/mascot.py; F4 shows or hides it.
 -->
 <style>
   :root { color-scheme: dark; }
@@ -321,13 +322,14 @@ var DRAW = (function () {
   var MAX_STARS = 4;
   // Glyphs and words per disease area and per mutation type come with the data, from query_drawing.py itself.
   var SCALE_LOW = -5.0, SCALE_HIGH = 0.0, MIN_BAR = 12, MAX_BAR = 44, PERCENT_WIDTH = 7, GAP = 2;
-  var help = { keys: [], what_you_see: [] }, areaLabels = {};
+  var help = { keys: [], what_you_see: [] }, areaLabels = {}, mascotData = null;
 
   function seg(t, fg, bold, bg) { return { t: t, fg: fg || null, bold: !!bold, bg: bg || null }; }
   function width(segs) { var n = 0; segs.forEach(function (s) { n += s.t.length; }); return n; }
   function pad(text, n) { while (text.length < n) text += ' '; return text; }
+  function spaces(n) { return new Array(Math.max(0, n) + 1).join(' '); }
 
-  function setup(all) { help = all.help || help; areaLabels = all.area_labels || {}; }
+  function setup(all) { help = all.help || help; areaLabels = all.area_labels || {}; mascotData = all.mascot || null; }
   function areaLabel(area, title) { return areaLabels[area] || title; }
   function kindGlyph(type) { var g = HQ.data().kind_glyphs; return g && g[type] !== undefined ? g[type] : '?'; }
   function kindLabel(type) { var l = HQ.data().kind_labels; return l && l[type] ? l[type] : type.replace(/_/g, ' '); }
@@ -563,10 +565,57 @@ var DRAW = (function () {
     return lines;
   }
 
+  // ---- Tally, the count courier: scripts/mascot.py. The frames, words and timing come with the data; only pose() is written again here ----
+  function mascotPose(since, call) {
+    // [mood, frame] this many ticks after the last query. No call on screen: idle.
+    var M = mascotData, t = M.ticks, idle = M.idle;
+    function idlePose(k) { var at = k % idle[0]; return ['idle', at === idle[1] ? 1 : at === idle[2] ? 2 : 0]; }
+    if (!call) return idlePose(since);
+    if (since < t[0]) return ['thinking', since % 2];
+    since -= t[0];
+    if (since < t[1]) return ['carrying', 0];
+    since -= t[1];
+    if (since < t[2]) { var mood = M.verdict_mood[call]; return [mood, Math.floor(since / 2) % M.frames[mood].length]; }
+    return idlePose(since - t[2]);
+  }
+  function mascotStyles(call) {
+    // style key -> [colour, bold], as mascot.styles(): greys for the body, the call's colour only where the call is stated
+    var colour = call ? CALLS[call].colour : LABEL;
+    return { '': [null, false], box: [LABEL, false], eye: [PLAIN, false], dot: [FAINT, false], arm: [PLAIN, false],
+             mark: [colour, false], number: [BRIGHT, true], quiet: [LABEL, false], call: [colour, false] };
+  }
+  function mascotLines(since, call, number) {
+    // Four lines of mascot.width cells: the speech right-justified, a gap, then the art. The number sits centred in Tally's hands.
+    var M = mascotData;
+    if (!M) return [];
+    var p = mascotPose(since, call), art = M.frames[p[0]][p[1]], speech = M.speech[p[0]], palette = mascotStyles(call), out = [];
+    art.forEach(function (artLine, row) {
+      var line = [];
+      if (row === 1 && speech[0]) {
+        var style = palette[speech[1]];
+        line.push(seg(spaces(M.speech_width - speech[0].length)), seg(speech[0], style[0], style[1]), seg(spaces(M.gap)));
+      } else {
+        line.push(seg(spaces(M.speech_width + M.gap)));
+      }
+      artLine.forEach(function (pair) {
+        var text = pair[0], s = palette[pair[1]];
+        if (pair[1] === 'number') {
+          var left = Math.floor((6 - number.length) / 2);
+          text = number.length < 6 ? spaces(left) + number + spaces(6 - number.length - left) : number.slice(0, 6);
+        }
+        line.push(seg(text, s[0], s[1]));
+      });
+      out.push(line);
+    });
+    return out;
+  }
+  function mascot() { return mascotData; }
+
   return { seg: seg, width: width, CALLS: CALLS, BORDER: BORDER, PLAIN: PLAIN, LABEL: LABEL, FAINT: FAINT, BRIGHT: BRIGHT,
            setup: setup, areaLabel: areaLabel, kindLabel: kindLabel, chartLayout: chartLayout, position: position, bar: bar, axis: axis,
            percent: percent, short: short, listRow: listRow, variantTitle: variantTitle, verdictTitle: verdictTitle,
-           verdictLines: verdictLines, evidenceRows: evidenceRows, whatTravelledLine: whatTravelledLine, helpLines: helpLines };
+           verdictLines: verdictLines, evidenceRows: evidenceRows, whatTravelledLine: whatTravelledLine, helpLines: helpLines,
+           mascot: mascot, mascotPose: mascotPose, mascotLines: mascotLines };
 })();
 </script>
 
@@ -589,8 +638,9 @@ var TERM = (function () {
   var ALL, D, sites, genes, kinds;
   var S = { area: null, show: 'examples', gene: HQ.ANY_GENE, kind: HQ.ANY_KIND, text: '', typed: '', cursor: 0, cursorAtEnd: true,
             patientAt: null, minCount: 5, matches: [], lines: [], found: 0, highlighted: null, scroll: 0,
-            focus: 'input', overlay: null, help: false, result: null, travelled: null, cursorOn: true, footerKeys: [] };
-  var APP_KEYS = { f1: 1, f2: 1, f3: 1, escape: 1, tab: 1, '?': 1 };  // the app's own bindings: a Textual Input never sees these
+            focus: 'input', overlay: null, help: false, result: null, travelled: null, cursorOn: true, footerKeys: [],
+            mascotSince: 0, mascotHold: null, mascotShown: true, mascotDrawn: '' };  // Tally: ticks since the last query pick the pose
+  var APP_KEYS = { f1: 1, f2: 1, f3: 1, f4: 1, escape: 1, tab: 1, '?': 1 };  // the app's own bindings: a Textual Input never sees these
   var grid, screen, kb;
 
   // ------------------------------------------------------------------ the grid
@@ -652,11 +702,26 @@ var TERM = (function () {
     drawVerdict();
     var bottom = drawEvidence();
     if (S.travelled) putSegs(bottom + 2, 3, S.travelled);
+    if (S.mascotShown) drawMascot(bottom + 4);  // #mascot-row: a blank line under the last line, 4 rows, right-aligned inside the 3-cell padding
     drawFooter();
     drawOverlay();
     if (S.help) drawHelp();
     return grid;
   }
+  function mascotState() {
+    return { call: S.result ? S.result.after.call : null, number: S.result ? DRAW.percent(S.result.bestFrequency) : '' };
+  }
+  function mascotKey(since) {
+    var m = mascotState();
+    return [m.call, m.number].concat(DRAW.mascotPose(since, m.call)).join('|');
+  }
+  function drawMascot(row0) {
+    var m = mascotState(), M = DRAW.mascot();
+    if (!M) return;
+    DRAW.mascotLines(S.mascotSince, m.call, m.number).forEach(function (line, i) { putSegs(row0 + i, COLS - 3 - M.width, line); });
+    S.mascotDrawn = mascotKey(S.mascotSince);
+  }
+  function restartMascot() { if (S.mascotHold === null) S.mascotSince = 0; }
   function drawHeader() {
     fill(0, 0, COLS, UI.panel);
     put(0, 1, '⭘', UI.fg);
@@ -776,8 +841,9 @@ var TERM = (function () {
   function drawFooter() {
     var row = ROWS - 1;
     fill(row, 0, COLS, UI.panel);
-    var keys = [['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient'], ['esc', 'Quit']];
-    if (S.overlay) keys = [['esc', 'Dismiss menu'], ['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient']];
+    var tally = DRAW.mascot() ? DRAW.mascot().name : 'Tally';
+    var keys = [['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient'], ['f4', tally], ['esc', 'Quit']];
+    if (S.overlay) keys = [['esc', 'Dismiss menu'], ['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient'], ['f4', tally]];
     var x = 0;
     S.footerKeys = [];
     keys.forEach(function (k) {
@@ -950,6 +1016,7 @@ var TERM = (function () {
     } else {
       S.highlighted = null;
       S.result = null;
+      restartMascot();
     }
   }
   function scrollToHighlight() {
@@ -970,7 +1037,9 @@ var TERM = (function () {
     var row = HQ.primary(S.matches[S.highlighted].name);
     S.result = HQ.query(row, S.patientAt, S.minCount);
     S.travelled = DRAW.whatTravelledLine(S.result, S.minCount);
+    restartMascot();
   }
+  function toggleMascot() { S.mascotShown = !S.mascotShown; }
   function searchAsYouType() {
     var text = S.typed.trim();
     S.text = text.toLowerCase().indexOf('chr') === 0 ? text : text.toLowerCase();
@@ -1013,6 +1082,7 @@ var TERM = (function () {
     if (key === 'f1' || (key === '?' && !(S.focus === 'input' && !S.overlay))) { S.help = true; return true; }
     if (key === 'f2') { toggleHiding(); return true; }
     if (key === 'f3') { movePatient(); return true; }
+    if (key === 'f4') { toggleMascot(); return true; }
     if (S.overlay) {
       var g = overlayGeometry(S.overlay);
       if (key === 'escape') S.overlay = null;
@@ -1109,7 +1179,7 @@ var TERM = (function () {
   }
   var KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Home: 'home', End: 'end', PageUp: 'pageup',
                PageDown: 'pagedown', Enter: 'enter', Escape: 'escape', Tab: 'tab', Backspace: 'backspace', Delete: 'delete',
-               F1: 'f1', F2: 'f2', F3: 'f3', ' ': 'space' };
+               F1: 'f1', F2: 'f2', F3: 'f3', F4: 'f4', ' ': 'space' };
   function onKeydown(e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var key = KEYS[e.key] || (e.key.length === 1 ? e.key : null);
@@ -1184,6 +1254,14 @@ var TERM = (function () {
       if (S.focus === 'input' && !S.overlay && !S.help) { S.cursorOn = !S.cursorOn; render(); }
       else if (!S.cursorOn) { S.cursorOn = true; }
     }, 500);
+    if (DRAW.mascot()) {
+      // Tally's clock, as the terminal's set_interval: one tick, and a redraw only when the frame changed
+      setInterval(function () {
+        if (S.mascotHold !== null) return;
+        S.mascotSince++;
+        if (S.mascotShown && mascotKey(S.mascotSince) !== S.mascotDrawn) render();
+      }, 1000 / DRAW.mascot().fps);
+    }
   }
   function boot() {
     screen = document.getElementById('screen');
@@ -1213,6 +1291,12 @@ var TERM = (function () {
     click: function (row, col) { click(row, col); render(); },
     cursorDown: function (n) { for (var i = 0; i < n; i++) moveHighlight(1); render(); },
     cursorOn: function (on) { S.cursorOn = on; render(); },
+    mascotHold: function (since) {
+      // Pin Tally at this many ticks after a query, as the terminal's hold_mascot(); null lets it move again.
+      S.mascotHold = since;
+      if (since !== null) S.mascotSince = since;
+      render();
+    },
     reset: function () {
       if (S.area !== ALL.default_area) loadArea(ALL.default_area);
       S.show = 'examples'; S.gene = HQ.ANY_GENE; S.kind = HQ.ANY_KIND; S.text = ''; S.typed = ''; S.cursor = 0; S.cursorAtEnd = true;

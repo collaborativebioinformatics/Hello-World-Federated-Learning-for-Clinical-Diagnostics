@@ -37,6 +37,8 @@ The keys:
 | F3 | move the patient to the next hospital |
 | Escape | quit |
 
+Bottom right stands Tally, the count courier, a small character of our own drawn with box lines and dots. It stands for what crosses hospital walls: when a query runs it sets off, comes back holding the highest share of healthy carriers any hospital reported, shows the call for a moment, arms up for LIKELY HARMLESS, an exclamation mark for KEEP FLAGGED, a shrug for CANNOT TELL, and then stands idle with a blink now and then. F4 hides or shows it for the session; a window under 30 rows has no room for it. The web demo draws the same frames from the same file, `scripts/mascot.py`, and the check script holds it at one frame so the pictures always show the same pose.
+
 The screen reflows with the window. Below about 90 columns the picker sits above the verdict; below 30 rows the header goes and the panels lose their blank lines; at 80 by 24 the screen scrolls. The glyphs come from the symbol blocks every terminal font carries. Setting the environment variable `PATIENT_QUERY_PLAIN=1` draws words instead.
 
 ![The screen on the inherited cancer area, on POLD1 S173N](patient_query_tui_cancer.png)

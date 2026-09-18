@@ -49,6 +49,7 @@ from pathlib import Path
 import pandas as pd
 
 import hospital_query
+import mascot
 import query_drawing
 from hospital_query import DEFAULT_MIN_COUNT, MISSENSE, PILE_UP_FOLD, PRESUMED_HARMFUL
 
@@ -83,6 +84,7 @@ def main() -> None:
         "area_order": areas,
         "area_labels": {area: query_drawing.area_label(area) for area in areas},
         "help": {"keys": query_drawing.KEYS, "what_you_see": query_drawing.WHAT_YOU_SEE},
+        "mascot": mascot.export(),  # Tally's frames, words and timing, so the page draws the very same character
         "areas": {},
     }
     for area in areas:

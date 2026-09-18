@@ -432,6 +432,7 @@ KEYS = [
     ("F1 or ?", "this help"),
     ("F2", "hide counts under 5, or show them: what privacy costs"),
     ("F3", "move the patient to the next hospital"),
+    ("F4", "show or hide Tally, the count courier in the corner"),
     ("Esc", "quit"),
 ]
 

@@ -12,11 +12,17 @@ screen as SVG, then headless Chrome or Edge turns the SVG into a PNG.
     area             the dropdown switches to inherited cancer: its genes, its examples, its two-copy line
     help             F1 and ? open the help overlay, any key closes it
     one deletion     the MYBPC3 deletion is found by either of its ids
-    small window     80 x 24 still shows the call and the chart
+    Tally            the count courier is on screen, carries the number, changes pose with the call, F4 hides it
+    small window     80 x 24 still shows the call and the chart, and has no room for Tally
+
+Tally is held at one fixed frame in every scenario, so that the pictures and the checks always
+see the same pose; the web demo is compared against the terminal at that same frame.
 
 Reads   data/ (the heart area) and data/cancer/ (skipped when it is not built)
 Writes  docs/patient_query_tui.png, docs/patient_query_tui_cancer.png,
-        docs/patient_query_tui_help.png, docs/patient_query_tui_other_types.png
+        docs/patient_query_tui_help.png, docs/patient_query_tui_other_types.png,
+        docs/patient_query_tui_mascot_carrying.png, docs/patient_query_tui_mascot_flagged.png,
+        docs/patient_query_tui_mascot_cannot_tell.png
 
 Usage:
     uv run python scripts/06_query_tui_check.py               # check, and write the pictures into docs/
@@ -59,6 +65,7 @@ BROWSERS = [
 ]
 WIDE, WIDE_PIXELS = (120, 38), (1482, 980)  # the size of docs/patient_query_tui_other_types.png, and its pixels
 README_SIZE, README_PIXELS = (118, 32), (1226, 700)  # docs/patient_query_tui.png: 118 x 32, drawn 1226 pixels wide
+MASCOT_FRAME = 5  # Tally held at this many ticks after a query: the pose for the call, arms up when it is harmless
 
 
 class Check:
@@ -76,6 +83,8 @@ class Check:
         started = time.time()
         try:
             async with app.run_test(size=size) as pilot:
+                await pilot.pause()
+                app.hold_mascot(MASCOT_FRAME)  # one fixed frame, so that every picture and check sees the same Tally
                 await pilot.pause()
                 await scenario(app, pilot)
                 await pilot.pause()
@@ -242,12 +251,54 @@ async def one_deletion(app, pilot, check: Check):
             check.picture(app, "patient_query_tui_other_types")
 
 
+async def mascot(app, pilot, check: Check):
+    """Tally, the count courier: on screen, carrying the number, one pose per call, hidden by F4."""
+    row = app.query_one("#mascot-row")
+    assert app.mascot_shown and row.display, "Tally should be on screen by default"
+    assert "f4" in app.screen.active_bindings, "the footer should offer F4"
+    app.hold_mascot(0)
+    await pilot.pause()
+    assert "asking the other hospitals" in on_screen(app, "#mascot"), "just after a query Tally should be setting off"
+    app.hold_mascot(2)
+    await pilot.pause()
+    shown = on_screen(app, "#mascot")
+    assert "counts back" in shown and "15.2%" in shown, f"Tally should carry 15.2%, the best share for DSP N1526K, got {shown!r}"
+    check.picture(app, "patient_query_tui_mascot_carrying")
+    app.hold_mascot(MASCOT_FRAME)
+    await pilot.pause()
+    shown = on_screen(app, "#mascot")
+    assert "likely harmless" in shown and "^" in shown, "DSP N1526K is likely harmless: Tally should be happy"
+    await pilot.press("down")  # TTR V142I: kept flagged
+    await pilot.pause()
+    assert app.result.after.call == "KEEP FLAGGED"
+    shown = on_screen(app, "#mascot")
+    assert "keep flagged" in shown and "!" in shown, "Tally should change pose with the call"
+    check.picture(app, "patient_query_tui_mascot_flagged")
+    await pilot.press("down", "down")  # MYH7 R403Q: cannot tell
+    await pilot.pause()
+    assert app.result.after.call == "FREQUENCY SAYS NOTHING"
+    shown = on_screen(app, "#mascot")
+    assert "cannot tell" in shown and "?" in shown, "Tally should shrug when frequency says nothing"
+    check.picture(app, "patient_query_tui_mascot_cannot_tell")
+    app.hold_mascot(20)  # long after the query: idle, no words
+    await pilot.pause()
+    assert "cannot tell" not in on_screen(app, "#mascot") and "╭" in on_screen(app, "#mascot")
+    await pilot.press("f4")
+    await pilot.pause()
+    assert not app.mascot_shown and not row.display, "F4 should hide Tally"
+    await pilot.press("f4")
+    await pilot.pause()
+    assert app.mascot_shown and row.display, "F4 again should bring Tally back"
+
+
 async def small_window(app, pilot, check: Check):
     assert app.short and app.screen.has_class("narrow"), "80 x 24 should be both narrow and short"
     assert app.result and "line 0.1%" in on_screen(app, "#verdict")
     chart = on_screen(app, "#evidence")
     assert "Lagos" in chart and "15.2%" in chart, "the chart should still show the decisive number"
     assert app.chart_width() <= 76, "the chart should be drawn within the panel"
+    assert not app.query_one("#mascot-row").display, "80 x 24 has no room for Tally"
+    assert "f4" not in app.screen.active_bindings, "with Tally gone the footer should not offer F4"
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +313,7 @@ async def main_async(out: Path, png: bool) -> int:
         ("hiding counts under 5", hiding, (118, 36), DEFAULT_AREA),
         ("help overlay", help_overlay, WIDE, DEFAULT_AREA),
         ("the MYBPC3 deletion by either id", one_deletion, WIDE, DEFAULT_AREA),
+        ("Tally, the count courier", mascot, WIDE, DEFAULT_AREA),
         ("80 x 24 window", small_window, (80, 24), DEFAULT_AREA),
     ]
     if "cancer" in available_areas():
