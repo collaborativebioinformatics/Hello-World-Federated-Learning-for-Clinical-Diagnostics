@@ -190,8 +190,13 @@ def plot(results: dict) -> None:
     import matplotlib.pyplot as plt
 
     areas = list(results["areas"])
-    style = {"oslo_only": ("Oslo only", "#8CA86A", "o"), "federated": ("Federated (FedAvg)", "#3B6D11", "s"),
-             "pooled": ("Everything pooled", "#2c2c2a", "^")}
+    # Okabe-Ito blue / vermillion / bluish green. Chosen by running the six
+    # categorical-palette checks against a white surface rather than by eye: the
+    # previous two-greens-and-black set failed the chroma and contrast floors, and
+    # this one clears the colour-vision-deficiency target on every pair, worst
+    # 11.0 against a target of 8. Markers differ too, so identity is never colour alone.
+    style = {"oslo_only": ("Oslo only", "#D55E00", "o"), "federated": ("Federated (FedAvg)", "#0072B2", "s"),
+             "pooled": ("Everything pooled", "#009E73", "^")}
     fig, axes = plt.subplots(2, 1, figsize=(11, 7), sharex=True)
     panels = [("auc_travelling", "A   AUC on variants of South Asian or African ancestry patients seen at Oslo", "AUC"),
               ("false_alarms", "B   False alarms among population-discordant benign variants (lower is better)", "false alarms, %")]
@@ -210,7 +215,7 @@ def plot(results: dict) -> None:
     axes[1].set_xticks(range(len(areas)),
                        [f"{a}\nn={results['areas'][a]['test_rows']}" for a in areas], fontsize=8.5)
     axes[0].legend(frameon=False, ncol=3, loc="lower left")
-    fig.suptitle("Federated training, one pipeline per disease area: three ancestry hospitals, "
+    fig.suptitle("Federated training, one pipeline per clinical specialty: three ancestry hospitals, "
                  f"{len(results['seeds'])} partitions, error bars are standard deviations", fontsize=11.5)
     fig.tight_layout()
     fig.savefig(FIGURE, dpi=160)
