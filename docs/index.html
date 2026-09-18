@@ -39,6 +39,7 @@
   .tabs a:hover{color:var(--bar-ink);background:var(--bar-hover)}
   .tabs a{--tint:#5fafff}
   .tabs a[data-tab="pipeline"]{--tint:#5fafff}
+  .tabs a[data-tab="results"]{--tint:#ef9fb0}
   .tabs a[data-tab="query"]{--tint:#8fd14f}
   .tabs a[data-tab="manuscript"]{--tint:#d9a6ff}
   .tabs a[data-tab="docs"]{--tint:#7fd6d0}
@@ -81,6 +82,7 @@
   <a class="name" href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together#readme" title="REFLECT: Respectfully Exchanging Federated-Learning Evidence across Clinics, Together. The repository on GitHub">Repo<span class="out">&#8599;</span></a>
   <nav class="tabs" aria-label="Pages">
     <a href="#pipeline" data-tab="pipeline">Pipeline in motion</a>
+    <a href="#results" data-tab="results">Results</a>
     <a href="#query" data-tab="query">Patient query</a>
     <a href="#manuscript" data-tab="manuscript">Manuscript</a>
     <a href="#docs" data-tab="docs">Docs</a>
@@ -132,7 +134,7 @@
 
   <noscript>
     <div class="docs"><div class="wrap">
-      <p class="lead">The tabs need JavaScript. The pages themselves: <a href="demo/">the patient query</a>, <a href="pipeline_live/">the pipeline in motion</a>, <a href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/blob/main/Manuscript.pdf">the manuscript</a> and <a href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/tree/main/docs">the docs</a>.</p>
+      <p class="lead">The tabs need JavaScript. The pages themselves: <a href="demo/">the patient query</a>, <a href="pipeline_live/">the pipeline in motion</a>, <a href="results/">the results</a>, <a href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/blob/main/Manuscript.pdf">the manuscript</a> and <a href="https://github.com/collaborativebioinformatics/REFLECT-Respectfully-Exchanging-Federated-Learning-Evidence-across-Clinics-Together/tree/main/docs">the docs</a>.</p>
     </div></div>
   </noscript>
 </main>
@@ -171,6 +173,7 @@
   var TABS = {
     query:      { title: 'Patient query',      src: 'demo/index.html',          open: 'demo/' },
     pipeline:   { title: 'Pipeline in motion', src: 'pipeline_live/index.html', open: 'pipeline_live/' },
+    results:    { title: 'Results',            src: 'results/index.html',       open: 'results/' },
     manuscript: { title: 'Manuscript',         srcdoc: manuscriptPage,          open: PDF },
     docs:       { title: 'Docs',               panel: true,                     open: REPO + '/tree/main/docs' }
   };
