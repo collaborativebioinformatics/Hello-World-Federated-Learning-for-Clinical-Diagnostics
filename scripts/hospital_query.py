@@ -340,6 +340,18 @@ def read_evidence(answers: list[HospitalAnswer], public_frequency: float = 0.0, 
     for a in only_in_sick:
         reasons.append(f"seen in {a.sick.carriers} sick patients at {a.site} and in no healthy ones")
     what_decides, in_short = what_decides_without_frequency(mutation_type)
+    # In a two-copy gene a variant can be well above 0.1% and still under its 1% line: say so, rather than "rare".
+    under_line = [(a.healthy.frequency, f"of healthy patients at {a.site}") for a in answers
+                  if TOO_COMMON <= a.healthy.frequency < too_common]
+    if TOO_COMMON <= public_frequency < too_common:
+        under_line.append((public_frequency, "of people in the public database"))
+    if under_line:
+        frequency, where = max(under_line)
+        reasons.append(
+            f"seen in {frequency:.2%} {where}, under the {too_common:.0%} line for a two-copy disease, "
+            f"so frequency cannot clear it: {what_decides}"
+        )
+        return Reading("FREQUENCY SAYS NOTHING", reasons, f"under the {too_common:.0%} line: {in_short}")
     reasons.append(f"rare or unseen among healthy patients, so frequency cannot clear it: {what_decides}")
     return Reading("FREQUENCY SAYS NOTHING", reasons, f"rare among healthy patients: {in_short}")
 
