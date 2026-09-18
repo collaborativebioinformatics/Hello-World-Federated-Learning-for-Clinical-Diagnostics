@@ -350,7 +350,7 @@ def area_lines(areas: dict, runs: int, nvflare: dict) -> str:
     for area, a in areas.items():
         removed, introduced, p = a["paired"]["removed"], a["paired"]["introduced"], a["paired"]["p"]
         intro = "none" if introduced == 0 else n(introduced)
-        line = (f"<b>{esc(a['header'])}.</b> Going from the public database to the counts from all three hospitals removed "
+        line = (f"<b>{esc(a['header'])}.</b> Public database to all three hospitals: removed "
                 f"{n(removed)} false alarm{'' if removed == 1 else 's'} and introduced {intro}, p = {p_text(p)}. ")
         if area in nvflare:
             f = nvflare[area]
@@ -430,43 +430,37 @@ def render(areas: dict, runs: int, nvflare: dict, specialties: list[dict], repla
         '<meta name="description" content="What Team 12 found: false alarms across three disease areas and twelve clinical specialties when three simulated hospitals share counts and model weights instead of patient records.">',
         f"<style>{CSS}</style></head><body><div class=\"wrap\">",
         f'<div class="top"><a class="wm" href="{REPO}#readme">REFLECT</a><h1>Results</h1><span class="ver">built {esc(built)} by scripts/export_results_page.py</span></div>',
-        f'<p class="lead">{esc(what_tested)}</p>',
-        f'<p class="lead">{esc(real_simulated)}</p>',
+        '<p class="lead">Three simulated hospitals, real verdicts, scores and frequencies. Only counts and model numbers ever travel.</p>',
 
         "<h2>False alarms across three disease areas</h2>",
-        f"<p>{esc(readme['matter'])}: {esc(counts)}. {esc(readme['table_line'])}</p>",
+        "<p>False alarms on harmless variants that are common in one population and rare in another, by what the model is told about frequency.</p>",
         headline_table(areas),
         area_lines(areas, runs, nvflare),
         sensitivity_line(areas),
-        '<figure><img src="../manuscript_figure3.png" alt="Three bar charts, one per disease area, of false alarms under the five sources of frequency evidence. '
-        'The bar for the federated query is the shortest in every area and equals the ceiling.">'
-        "<figcaption>The same counts as the manuscript draws them.</figcaption></figure>",
 
         "<h2>Twelve clinical specialties</h2>",
-        f"<p>{esc(' '.join(readme['setup']))}</p>",
+        '<p>The same comparison inside twelve specialties of the all-panels table: a model trained at Oslo alone, one federated across the three hospitals, one on all rows pooled.</p>',
         '<figure><img src="../disease_areas_figure.png" alt="Two panels over twelve clinical specialties. Panel A, AUC on variants of South Asian or African ancestry patients seen at Oslo, '
         'has the three lines on top of each other in every specialty. Panel B, false alarms among population-discordant benign variants, separates them: Oslo training alone is above '
         'federated and pooled in most specialties."></figure>',
         specialty_table(specialties),
-        f'<p class="small">Orange cells: Oslo alone worse than federated. {esc(readme["caveat_shared"])} {caveat_pass}</p>',
+        '<p class="small">Orange: Oslo alone worse than federated. Specialties share genes, so compare the three models within a row only.</p>',
 
         "<h2>Over four quarters</h2>",
-        f"<p>The three hospitals grow to their final size in four equal steps and the model is retrained each quarter on the verdicts held so far; the heart area is shown. "
-        f"{esc(replay['what'])} {esc(replay['q4'])}</p>",
+        '<p>The hospitals grow in four steps and the model is retrained each quarter, heart area. A simulation; the last quarter is the build.</p>',
         '<figure><img src="../manuscript_figure4.png" alt="Two line charts over four quarters for the heart area. Left, false alarms with the public database stay near 7 while '
         'the federated query falls to 2 and meets the ceiling. Right, readings changed by the count query rise for a patient at each hospital, Oslo highest."></figure>',
         replay_table(replay),
 
         "<h2>What the accuracy score cannot see</h2>",
         f"<p>The usual summary score, AUC, stayed between {esc(readme['auc_lo'])} and {esc(readme['auc_hi'])} whatever the model was told and whichever hospital trained it. "
-        f"On the heart test set AlphaMissense alone reaches an AUC of {esc(readme['alphamissense'])}, the gene name alone {esc(readme['gene_name'])}, and within single genes "
-        f"the scores still reach about {esc(readme['within_lo'])} to {esc(readme['within_hi'])}. "
-        "So the AUC reports how the expert verdicts were made, and the false alarms above are the measurement that needs the hospitals' counts.</p>",
+        f"AlphaMissense alone reaches {esc(readme['alphamissense'])} and the gene name alone {esc(readme['gene_name'])}. "
+        "The AUC mostly reports how the verdicts were made; the false alarms above are the measurement.</p>",
 
         "<h2>Try it</h2>",
         '<div class="try">',
-        '<a class="big" href="../demo/">The patient query<small>Pick a variant, every hospital answers with counts, and the screen gives the call twice: the patient\'s hospital alone, then all three.</small></a>',
-        '<a class="big" href="../pipeline_live/">The pipeline in motion<small>Data comes in, hospitals train together, a quarter passes, a doctor asks.</small></a>',
+        '<a class="big" href="../demo/">The patient query<small>Pick a variant; every hospital answers with counts.</small></a>',
+        '<a class="big" href="../pipeline_live/">The pipeline in motion<small>Watch it move.</small></a>',
         "</div>",
         f'<p class="small">The full write-ups on GitHub: {doc_links}.</p>',
 
