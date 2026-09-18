@@ -1,0 +1,1229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patient query</title>
+<meta name="description" content="A patient carries a DNA variant. Ask three simulated hospitals how many of their healthy and sick patients carry it, and read the answer with two rules a clinical lab already uses.">
+<!--
+  Built by scripts/export_web_demo.py from docs/demo/template.html on __BUILT__. Do not edit index.html by hand:
+  rerun  uv run python scripts/export_web_demo.py  instead.
+
+  One file, no server, no request at run time. This is scripts/06_query_tui.py drawn in the browser:
+  a 120 x 40 character grid rendered the way Textual exports a screenshot (background rectangles and
+  runs of text with a fixed length per character), with the same widgets, colours, words and keys.
+  The two rules are in the demo-logic script and mirror scripts/hospital_query.py line for line;
+  the drawing mirrors scripts/query_drawing.py.
+-->
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #121212; }
+  body { min-height: 100vh; }
+  #wrap { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  #screen { display: block; margin: 0 auto; width: 100%; max-width: 1482px; min-width: 720px; }
+  #screen svg { display: block; width: 100%; height: auto; max-height: 100vh; }
+  #kb { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0.01; border: 0; padding: 0; margin: 0;
+        font-size: 16px; background: transparent; color: transparent; caret-color: transparent; z-index: -1; }
+  #note { font: 14px/1.5 monospace; color: #c6c6c6; padding: 16px; max-width: 70ch; }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="screen"></div></div>
+<input id="kb" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="keyboard input for the patient query">
+
+<script id="demo-data" type="__DEMO_DATA_TYPE__">__DEMO_DATA__</script>
+
+<script id="demo-logic">
+/* The patient query, as scripts/hospital_query.py does it. Same numbers in, same call out. */
+var HQ = (function () {
+  'use strict';
+  var D = null;  // the current disease area's data
+  var MISSENSE = 'missense';
+  var PRESUMED_HARMFUL = {
+    protein_cutting: 'it cuts the protein short',
+    frameshift: 'it shifts the reading frame, which scrambles the rest of the protein',
+    splice_site: 'it breaks a splice site, so the pieces of the gene are joined wrongly'
+  };
+  var PRESUMED_HARMLESS = {
+    synonymous: 'it is a silent change, the protein stays the same',
+    intronic: 'it sits inside an intron, outside the code for the protein'
+  };
+  var rows = [], byId = {}, primaryByName = {}, primaries = [], overviews = {};
+
+  function load(data) {
+    D = data;
+    var zeros = [];
+    for (var z = 0; z < 2 * data.sites.length; z++) zeros.push(0);
+    rows = data.rows.map(function (r, index) {
+      var counts = r[7] || zeros, totals = r[8] || null, carried = 0;
+      for (var i = 0; i < counts.length; i++) carried += counts[i];
+      var name = r[1];
+      return { index: index, id: r[0], name: name, nameLower: name.toLowerCase(), gene: geneOf(name),
+               type: data.types[r[2]], verdict: data.verdicts[r[3]], stars: r[4], publicFrequency: r[5],
+               judgedBy: r[6], counts: counts, totals: totals, said: r[9] || null, carried: carried };
+    });
+    byId = {}; primaryByName = {}; primaries = []; overviews = {};
+    rows.forEach(function (row) {
+      byId[row.id] = row;
+      // A name can belong to more than one DNA change: keep the one patients carry most, as resolve() does.
+      var current = primaryByName[row.name];
+      if (!current || row.carried > current.carried) primaryByName[row.name] = row;
+    });
+    rows.forEach(function (row) { if (primaryByName[row.name] === row) primaries.push(row); });
+    primaries.sort(function (a, b) { return a.name < b.name ? -1 : a.name > b.name ? 1 : 0; });
+  }
+  function geneOf(name) { var cut = name.indexOf(' '); return cut < 0 ? name : name.slice(0, cut); }
+
+  // ---- number formatting that matches Python's format() and round() ----
+  function pyFixed(y, digits) {
+    // Python rounds an exact tie to the even digit; toFixed rounds it up. A tie exists only when
+    // y * 2^(digits+1) is an odd integer, and that product is exact in floating point.
+    var scaled = y * Math.pow(2, digits + 1);
+    if (isFinite(scaled) && Math.floor(scaled) === scaled && Math.abs(scaled) % 2 === 1) {
+      var s = y * Math.pow(10, digits);  // an exact half-integer
+      var low = Math.floor(s);
+      var chosen = (low % 2 === 0) ? low : low + 1;
+      return (chosen / Math.pow(10, digits)).toFixed(digits);
+    }
+    return y.toFixed(digits);
+  }
+  function pyPercent(x, digits) { return pyFixed(x * 100, digits) + '%'; }
+  function pyRound(x) {
+    var f = Math.floor(x), d = x - f;
+    if (d > 0.5) return f + 1;
+    if (d < 0.5) return f;
+    return f % 2 === 0 ? f : f + 1;
+  }
+  function thousands(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  // ---- inside one hospital ----
+  function reported(carriers, total, minCount) {
+    var hidden = carriers > 0 && carriers < minCount;
+    return { carriers: hidden ? null : carriers, total: total, hiddenBelow: minCount, hidden: hidden,
+             frequency: hidden ? 0 : carriers / total };
+  }
+  function countText(c) {
+    if (c.hidden) return 'fewer than ' + c.hiddenBelow;
+    if (!c.carriers) return 'none of ' + thousands(c.total);
+    return thousands(c.carriers) + ' of ' + thousands(c.total) + ' (' + pyPercent(c.frequency, 2) + ')';
+  }
+  function askHospital(row, i, minCount) {
+    var site = D.sites[i];
+    var healthyTotal = row.totals ? row.totals[2 * i] : site.healthy_total;
+    var sickTotal = row.totals ? row.totals[2 * i + 1] : site.sick_total;
+    var judged = (row.judgedBy >> i) & 1;
+    return { site: site.id, healthy: reported(row.counts[2 * i], healthyTotal, minCount),
+             sick: reported(row.counts[2 * i + 1], sickTotal, minCount),
+             verdict: judged ? row.verdict : null, stars: judged ? row.stars : null };
+  }
+  function sameClassCounts(gene, type, minCount) {
+    // For a change that cuts the protein, shifts the frame or breaks a splice site: carriers of ANY such change in the gene.
+    if (!PRESUMED_HARMFUL[type] || !D.same_class || !D.same_class.genes[gene]) return [];
+    var sums = D.same_class.genes[gene], out = [];
+    D.sites.forEach(function (site) {
+      var row = sums[site.id];
+      if (!row) return;
+      out.push({ site: site.id, healthy: reported(row[0], row[1], minCount), sick: reported(row[2], row[3], minCount), verdict: null, stars: null });
+    });
+    return out;
+  }
+
+  // ---- the two rules ----
+  function isCommon(a, tooCommon) { return a.healthy.frequency >= tooCommon; }
+  function isPilingUp(a, tooCommon) {
+    if (a.sick.hidden || !isCommon(a, tooCommon)) return false;
+    return a.sick.frequency >= D.rules.pile_up_fold * a.healthy.frequency;
+  }
+  function fold(a) { return a.sick.frequency / a.healthy.frequency; }
+  function article(word) { return 'aeiou'.indexOf(word.charAt(0).toLowerCase()) >= 0 ? 'an' : 'a'; }
+  function presumption(type) {
+    var kind = type.replace(/_/g, ' ');
+    if (PRESUMED_HARMFUL[type]) return 'starts out presumed harmful, as ' + article(kind) + ' ' + kind + ' change: ' + PRESUMED_HARMFUL[type];
+    if (PRESUMED_HARMLESS[type]) return 'starts out presumed harmless, as ' + article(kind) + ' ' + kind + ' change: ' + PRESUMED_HARMLESS[type];
+    return '';
+  }
+  function whatDecidesWithoutFrequency(type) {
+    if (type === MISSENSE) return ['the scores have to decide', 'the scores must decide'];
+    if (PRESUMED_HARMFUL[type]) return ['the presumption from its mutation type stands, harmful', 'presumed harmful from its type'];
+    if (PRESUMED_HARMLESS[type]) return ['the presumption from its mutation type stands, harmless', 'presumed harmless from its type'];
+    return ['its mutation type gives no presumption, so a lab has to weigh the rest', 'its type gives no presumption'];
+  }
+  function geneLine(gene) { var g = D.genes[gene]; return g ? g[0] : D.rules.too_common; }
+  function lineReason(gene) { var g = D.genes[gene]; return g ? g[1] : ''; }
+  function judge(answers, publicFrequency, tooCommon) {
+    var piles = [], common = [], i;
+    for (i = 0; i < answers.length; i++) if (isPilingUp(answers[i], tooCommon)) piles.push(answers[i]);
+    for (i = 0; i < answers.length; i++) if (isCommon(answers[i], tooCommon)) common.push([answers[i].healthy.frequency, 'of healthy patients at ' + answers[i].site]);
+    if (publicFrequency >= tooCommon) common.push([publicFrequency, 'of people in the public database']);
+    var call = piles.length ? 'KEEP FLAGGED' : common.length ? 'LIKELY HARMLESS' : 'FREQUENCY SAYS NOTHING';
+    return { call: call, piles: piles, common: common };
+  }
+  function readEvidence(answers, publicFrequency, type, tooCommon) {
+    var reasons = [], p = presumption(type), i;
+    if (p) reasons.push(p);
+    var judged = judge(answers, publicFrequency, tooCommon), piles = judged.piles, common = judged.common;
+    for (i = 0; i < piles.length; i++) {
+      var a = piles[i];
+      reasons.push('piles up among the sick at ' + a.site + ': ' + pyPercent(a.sick.frequency, 1) + ' of sick against ' +
+                   pyPercent(a.healthy.frequency, 1) + ' of healthy patients (' + pyFixed(fold(a), 0) + ' times as common)');
+    }
+    for (i = 0; i < common.length; i++) reasons.push('common: ' + pyPercent(common[i][0], 1) + ' ' + common[i][1] + ' carry it');
+    if (piles.length) {
+      var worst = piles[0];
+      for (i = 1; i < piles.length; i++) if (fold(piles[i]) > fold(worst)) worst = piles[i];
+      return { call: 'KEEP FLAGGED', reasons: reasons, headline: pyFixed(fold(worst), 0) + 'x more common in sick than healthy at ' + worst.site };
+    }
+    if (common.length) {
+      var top = common[0];
+      for (i = 1; i < common.length; i++) if (common[i][0] > top[0] || (common[i][0] === top[0] && common[i][1] > top[1])) top = common[i];
+      if (tooCommon >= D.rules.too_common_two_copies) {
+        reasons.push('too common among healthy people even for a two-copy disease, where healthy carriers of one copy are expected: over the ' + pyPercent(tooCommon, 0) + ' line');
+      } else {
+        reasons.push('too common among healthy people to cause ' + D.disease_words);
+      }
+      return { call: 'LIKELY HARMLESS', reasons: reasons, headline: pyPercent(top[0], 1) + ' ' + top[1] + ' carry it' };
+    }
+    for (i = 0; i < answers.length; i++) {
+      var s = answers[i];
+      if (s.sick.carriers && s.healthy.carriers === 0) reasons.push('seen in ' + s.sick.carriers + ' sick patients at ' + s.site + ' and in no healthy ones');
+    }
+    var decides = whatDecidesWithoutFrequency(type);
+    // In a two-copy gene a variant can be well above 0.1% and still under its 1% line: say so, rather than "rare".
+    var underLine = [];
+    for (i = 0; i < answers.length; i++) {
+      var f = answers[i].healthy.frequency;
+      if (f >= D.rules.too_common && f < tooCommon) underLine.push([f, 'of healthy patients at ' + answers[i].site]);
+    }
+    if (publicFrequency >= D.rules.too_common && publicFrequency < tooCommon) underLine.push([publicFrequency, 'of people in the public database']);
+    if (underLine.length) {
+      var seen = underLine[0];
+      for (i = 1; i < underLine.length; i++) if (underLine[i][0] > seen[0] || (underLine[i][0] === seen[0] && underLine[i][1] > seen[1])) seen = underLine[i];
+      reasons.push('seen in ' + pyPercent(seen[0], 2) + ' ' + seen[1] + ', under the ' + pyPercent(tooCommon, 0) + ' line for a two-copy disease, ' +
+                   'so frequency cannot clear it: ' + decides[0]);
+      return { call: 'FREQUENCY SAYS NOTHING', reasons: reasons, headline: 'under the ' + pyPercent(tooCommon, 0) + ' line: ' + decides[1] };
+    }
+    reasons.push('rare or unseen among healthy patients, so frequency cannot clear it: ' + decides[0]);
+    return { call: 'FREQUENCY SAYS NOTHING', reasons: reasons, headline: 'rare among healthy patients: ' + decides[1] };
+  }
+
+  // ---- the trained model: what it said travels with the page (a probability as a word, and its side of the cut-off), never the scores it read ----
+  function modelVerdict(row, minCount) {
+    var model = D.model;
+    if (row.type !== MISSENSE) return { text: model ? model.missense_only : 'the trained model scores missense changes only, so it is not used here', call: 'not used' };
+    var which = D.min_counts.indexOf(minCount), said = row.said;
+    if (!model || !said || which < 0) return { text: model ? model.not_scored : 'not scored: no trained model found. Run scripts/03_train_local.py', call: 'not scored' };
+    var at = said.length > 2 ? 2 * which : 0, word = said[at], above = said[at + 1] === 1;
+    return { text: 'the trained model puts this at ' + word + ' likely harmful, ' + (above ? 'above' : 'below') + ' its cut-off of ' + model.threshold_word + ' · ' + model.trained_words,
+             call: above ? 'likely harmful' : 'likely harmless', source: model.source };
+  }
+
+  // ---- at the hospital the patient is at ----
+  function siteIndex(siteId) {
+    for (var i = 0; i < D.sites.length; i++) if (D.sites[i].id === siteId) return i;
+    return 0;
+  }
+  function query(row, patientAt, minCount) {
+    var answers = D.sites.map(function (s, i) { return askHospital(row, i, minCount); });
+    var own = answers[siteIndex(patientAt)];
+    var most = answers[0];
+    for (var i = 1; i < answers.length; i++) if (answers[i].healthy.frequency > most.healthy.frequency) most = answers[i];
+    var tooCommon = geneLine(row.gene), model = modelVerdict(row, minCount);
+    return {
+      row: row, name: row.name, variantId: row.id, patientAt: patientAt, publicFrequency: row.publicFrequency,
+      answers: answers,
+      before: readEvidence([own], row.publicFrequency, row.type, tooCommon),
+      after: readEvidence(answers, row.publicFrequency, row.type, tooCommon),
+      bestFrequency: most.healthy.frequency,
+      bestSite: most.healthy.frequency > 0 ? most.site : null,
+      model: model.text, modelCall: model.call,
+      mutationType: row.type, presumption: presumption(row.type),
+      gene: row.gene, tooCommon: tooCommon, lineReason: lineReason(row.gene),
+      sameClass: sameClassCounts(row.gene, row.type, minCount)
+    };
+  }
+  function overview(patientAt, minCount) {
+    // The call for every name at once, sorted by name, like hospital_query.overview(). Cached per setting.
+    var key = patientAt + '|' + minCount;
+    if (overviews[key]) return overviews[key];
+    var own = siteIndex(patientAt), byName = {};
+    var table = primaries.map(function (row) {
+      var answers = D.sites.map(function (s, i) { return askHospital(row, i, minCount); });
+      var best = 0, tooCommon = geneLine(row.gene);
+      for (var i = 0; i < answers.length; i++) if (answers[i].healthy.frequency > best) best = answers[i].healthy.frequency;
+      var before = judge([answers[own]], row.publicFrequency, tooCommon).call;
+      var after = judge(answers, row.publicFrequency, tooCommon).call;
+      var entry = { row: row, name: row.name, gene: row.gene, type: row.type, before: before, after: after, changed: before !== after, best: best };
+      byName[row.name] = entry;
+      return entry;
+    });
+    table.byName = byName;
+    var orders = D.orders && D.orders[key];
+    table.changedList = orders ? orders.changed.map(function (i) { return byName[rows[i].name]; }).filter(function (e) { return e && e.changed; })
+                               : table.filter(function (e) { return e.changed; }).sort(function (a, b) { return b.best - a.best; });
+    table.flaggedList = orders ? orders.flagged.map(function (i) { return byName[rows[i].name]; }).filter(function (e) { return e && e.after === 'KEEP FLAGGED'; })
+                               : table.filter(function (e) { return e.after === 'KEEP FLAGGED'; }).sort(function (a, b) { return b.best - a.best; });
+    overviews[key] = table;
+    return table;
+  }
+
+  // ---- finding variants ----
+  function resolve(text) {
+    // A name, in any case, or a variant id. An id in another spelling of the same change is not recognised here.
+    var t = text.trim(), lower = t.toLowerCase();
+    if (!t) return null;
+    if (byId[t]) return byId[t];
+    if (D.aliases && D.aliases[t] !== undefined) return rows[D.aliases[t]];
+    if (primaryByName[t]) return primaryByName[t];
+    for (var i = 0; i < primaries.length; i++) if (primaries[i].nameLower === lower) return primaries[i];
+    return null;
+  }
+  var ANY_GENE = 'any gene', ANY_KIND = 'any kind';
+  function filterVariants(table, show, gene, text, kind) {
+    // The rows the list should hold, given the three dropdowns and the search box. scripts/06_query_tui.py, filter_variants().
+    var out;
+    if (text.indexOf('chr') === 0) {
+      var found = resolve(text);
+      return found ? table.filter(function (t) { return t.name === found.name; }) : [];
+    }
+    if (show === 'examples' && (text || gene !== ANY_GENE || kind !== ANY_KIND)) show = 'all';
+    if (show === 'examples') out = D.examples.map(function (name) { return table.byName[name]; }).filter(Boolean);
+    else if (show === 'changed') out = table.changedList;
+    else if (show === 'flagged') out = table.flaggedList;
+    else out = table;
+    if (gene !== ANY_GENE) out = out.filter(function (t) { return t.gene === gene; });
+    if (kind !== ANY_KIND) out = out.filter(function (t) { return t.type === kind; });
+    if (text) out = out.filter(function (t) { return t.name.toLowerCase().indexOf(text) >= 0; });
+    return out;
+  }
+
+  return { load: load, data: function () { return D; }, rows: function () { return rows; }, primaries: function () { return primaries; },
+           primary: function (name) { return primaryByName[name]; },
+           query: query, overview: overview, resolve: resolve, filterVariants: filterVariants, readEvidence: readEvidence,
+           askHospital: askHospital, isCommon: isCommon, isPilingUp: isPilingUp, countText: countText, geneOf: geneOf,
+           pyPercent: pyPercent, pyFixed: pyFixed, pyRound: pyRound, thousands: thousands, siteIndex: siteIndex,
+           MISSENSE: MISSENSE, PRESUMED_HARMFUL: PRESUMED_HARMFUL, ANY_GENE: ANY_GENE, ANY_KIND: ANY_KIND };
+})();
+</script>
+
+<script id="demo-drawing">
+/* How the patient query looks: scripts/query_drawing.py, colour for colour. A "segment" is text with a style. */
+var DRAW = (function () {
+  'use strict';
+  var PATIENT_HERE = '#5fafff', BRIGHT = '#c4c5b5', PLAIN = '#c6c6c6', LABEL = '#949494', FAINT = '#626262', TRACK = '#3a3a3a';
+  var GREEN = '#98e024', RED = '#f4005f', YELLOW = '#fd971f', BLACK = '#1a1a1a';
+  var CALLS = {
+    'LIKELY HARMLESS': { colour: GREEN, label: 'LIKELY HARMLESS', cssClass: 'harmless' },
+    'KEEP FLAGGED': { colour: RED, label: 'KEEP FLAGGED', cssClass: 'flagged' },
+    'FREQUENCY SAYS NOTHING': { colour: YELLOW, label: 'CANNOT TELL', cssClass: 'cannot-tell' }
+  };
+  var BORDER = { harmless: '#4ebf71', flagged: '#b93c5b', 'cannot-tell': '#fea62b' };
+  var POPULATIONS = { nfe: 'European', sas: 'South Asian', afr: 'African' };
+  var MAX_STARS = 4;
+  // Glyphs and words per disease area and per mutation type come with the data, from query_drawing.py itself.
+  var SCALE_LOW = -5.0, SCALE_HIGH = 0.0, MIN_BAR = 12, MAX_BAR = 44, PERCENT_WIDTH = 7, GAP = 2;
+  var help = { keys: [], what_you_see: [] }, areaLabels = {};
+
+  function seg(t, fg, bold, bg) { return { t: t, fg: fg || null, bold: !!bold, bg: bg || null }; }
+  function width(segs) { var n = 0; segs.forEach(function (s) { n += s.t.length; }); return n; }
+  function pad(text, n) { while (text.length < n) text += ' '; return text; }
+
+  function setup(all) { help = all.help || help; areaLabels = all.area_labels || {}; }
+  function areaLabel(area, title) { return areaLabels[area] || title; }
+  function kindGlyph(type) { var g = HQ.data().kind_glyphs; return g && g[type] !== undefined ? g[type] : '?'; }
+  function kindLabel(type) { var l = HQ.data().kind_labels; return l && l[type] ? l[type] : type.replace(/_/g, ' '); }
+
+  function chartLayout(chartWidth) {
+    var sourceWidth, labWidth, room, compact;
+    for (var c = 0; c < 2; c++) {
+      compact = c === 1;
+      sourceWidth = compact ? 14 : 28; labWidth = compact ? 12 : 17;
+      room = chartWidth - (sourceWidth + 2 * PERCENT_WIDTH + labWidth + 5 * GAP);
+      if (room >= 2 * MIN_BAR) {
+        var bar = Math.min(Math.floor(room / 2), MAX_BAR);
+        return { sourceWidth: sourceWidth, labWidth: labWidth, healthyBar: bar, sickBar: bar, compact: compact };
+      }
+    }
+    if (room >= MIN_BAR) return { sourceWidth: sourceWidth, labWidth: labWidth, healthyBar: Math.min(room, MAX_BAR), sickBar: 0, compact: true };
+    return { sourceWidth: sourceWidth, labWidth: labWidth, healthyBar: 0, sickBar: 0, compact: true };
+  }
+  function position(frequency, w) {
+    if (frequency <= 0) return 0;
+    var clamped = Math.min(Math.max(Math.log(frequency) / Math.LN10, SCALE_LOW), SCALE_HIGH);
+    return HQ.pyRound((clamped - SCALE_LOW) / (SCALE_HIGH - SCALE_LOW) * w);
+  }
+  function bar(frequency, colour, w, tooCommon) {
+    if (w === 0) return [];
+    if (frequency === null) return [seg('┄┄┄', LABEL), seg(new Array(w - 3 + 1).join(' '))];
+    var filled = position(frequency, w), tick = position(tooCommon, w), out = [];
+    for (var i = 0; i < w; i++) {
+      if (i === tick) out.push(i < filled ? seg('┃', BRIGHT, true) : seg('┃', LABEL));
+      else if (i < filled) out.push(seg('━', colour));
+      else out.push(seg('─', TRACK));
+    }
+    return out;
+  }
+  function lineLabel(tooCommon) { return tooCommon < 0.01 ? HQ.pyPercent(tooCommon, 1) : HQ.pyPercent(tooCommon, 0); }
+  function axis(w, tooCommon) {
+    if (w === 0) return [];
+    var tickLabel = '┃' + lineLabel(tooCommon), tick = position(tooCommon, w), cells = [];
+    for (var i = 0; i < w; i++) cells.push(' ');
+    for (var k = 0; k < tickLabel.length; k++) cells[tick + k] = tickLabel[k];
+    if (tick >= 5) { cells[0] = 'r'; cells[1] = 'a'; cells[2] = 'r'; cells[3] = 'e'; }
+    if (w - (tick + tickLabel.length) >= 8) { var word = 'common'; for (var j = 0; j < 6; j++) cells[w - 6 + j] = word[j]; }
+    return [seg(cells.slice(0, w).join(''), LABEL)];
+  }
+  function percent(frequency) {
+    if (frequency === 0) return '0';
+    if (frequency >= 0.01) return HQ.pyPercent(frequency, 1);
+    return frequency >= 0.0001 ? HQ.pyPercent(frequency, 2) : HQ.pyPercent(frequency, 3);
+  }
+  function short(site) {
+    var s = site.replace(/^site_/, '');
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  }
+  function hospitalWords(siteId) {
+    var site = HQ.data().sites[HQ.siteIndex(siteId)];
+    return short(siteId) + ' · ' + (POPULATIONS[site.population] || site.population) + ' · ' + HQ.thousands(site.patients) + ' patients';
+  }
+  function withShortNames(sentence, sites) {
+    sites.forEach(function (site) { sentence = sentence.split(site).join(short(site)); });
+    return sentence;
+  }
+  function emphasiseNumbers(sentence) {
+    var out = [], re = /\d[\d.,]*(?:%|x)/g, last = 0, m;
+    while ((m = re.exec(sentence)) !== null) {
+      if (m.index > last) out.push(seg(sentence.slice(last, m.index), PLAIN));
+      out.push(seg(m[0], BRIGHT, true));
+      last = m.index + m[0].length;
+    }
+    if (last < sentence.length) out.push(seg(sentence.slice(last), PLAIN));
+    return out;
+  }
+  function highlightWords(segs, words, fg, bold) {
+    // Rich's Text.highlight_words: restyle every occurrence of the words, whatever segment boundaries they cross.
+    var text = segs.map(function (s) { return s.t; }).join(''), marks = [], i, at = 0;
+    while ((at = text.indexOf(words, at)) >= 0) { marks.push([at, at + words.length]); at += words.length; }
+    if (!marks.length) return segs;
+    var out = [], x = 0;
+    segs.forEach(function (s) {
+      for (i = 0; i < s.t.length; i++) {
+        var inside = marks.some(function (m) { return x + i >= m[0] && x + i < m[1]; });
+        var style = inside ? { fg: fg, bold: bold } : { fg: s.fg, bold: s.bold };
+        var last = out[out.length - 1];
+        if (last && last.fg === style.fg && last.bold === style.bold && last.bg === s.bg) last.t += s.t[i];
+        else out.push(seg(s.t[i], style.fg, style.bold, s.bg));
+      }
+      x += s.t.length;
+    });
+    return out;
+  }
+  function badge(call) { var style = CALLS[call]; return seg(' ' + style.label + ' ', BLACK, true, style.colour); }
+  function stars(n) { var s = ''; for (var i = 0; i < MAX_STARS; i++) s += i < n ? '★' : '☆'; return s; }
+  function listRow(name, call, type) {
+    var cut = name.indexOf(' '), gene = cut < 0 ? name : name.slice(0, cut), change = cut < 0 ? '' : name.slice(cut + 1);
+    var glyph = kindGlyph(type);
+    return [seg('● ', CALLS[call].colour), seg(glyph ? glyph + ' ' : '', LABEL), seg(gene + ' ', LABEL), seg(change, PLAIN)];
+  }
+  function variantTitle(name, variantId) {
+    var m = /^(\S+) ([A-Z*])(\d+)([A-Z*]+|fs|=)$/.exec(name);
+    if (!m) return [seg(name, BRIGHT, true), seg('   ' + variantId, FAINT)];
+    var title = [seg(m[1], BRIGHT, true), seg('  '), seg(m[2], PLAIN), seg(m[3], LABEL), seg(m[4], BRIGHT, true)];
+    var d = /^(chr\w+):g\.(\d+)([ACGT]+)>([ACGT]+)$/.exec(variantId);
+    if (d) {
+      title.push(seg('      ' + d[1], LABEL), seg(' : ', FAINT), seg(HQ.thousands(parseInt(d[2], 10)), LABEL),
+                 seg('   ' + d[3], PLAIN), seg(' → ', FAINT), seg(d[4], BRIGHT, true));
+    } else {
+      title.push(seg('      ' + variantId, FAINT));
+    }
+    return title;
+  }
+  function verdictTitle(result, colour) {
+    return [seg(' patient at ', colour), seg(hospitalWords(result.patientAt), PATIENT_HERE, true), seg(' · is this variant harmful? ', colour)];
+  }
+  function kindLine(result) {
+    var line = [seg(kindLabel(result.mutationType), PLAIN)];
+    if (result.presumption) line.push(seg('  ·  ', FAINT), seg(result.presumption.split(',')[0], LABEL));
+    return line;
+  }
+  function modelLine(result) {
+    var text = emphasiseNumbers(result.model);
+    if (result.modelCall === 'likely harmful') text = highlightWords(text, 'likely harmful', RED, true);
+    else if (result.modelCall === 'likely harmless') text = highlightWords(text, 'likely harmful', PLAIN, false);
+    return text;
+  }
+  function sameClassLine(result) {
+    function counts(pick) {
+      var parts = [];
+      result.sameClass.forEach(function (answer) {
+        var count = pick(answer), value = count.hidden ? '<' + count.hiddenBelow : percent(count.frequency);
+        parts.push(seg(short(answer.site) + ' ', LABEL), seg(value, PLAIN), seg('  ', FAINT));
+      });
+      return parts;
+    }
+    var line = [seg('any cutting, frameshift or splice change in ' + result.gene + '  ', LABEL), seg('healthy ', FAINT)];
+    line = line.concat(counts(function (a) { return a.healthy; }));
+    line.push(seg('sick ', FAINT));
+    return line.concat(counts(function (a) { return a.sick; }));
+  }
+  function verdictLines(result, sites, compact) {
+    var blank = compact ? [] : [[]];
+    var lines = [variantTitle(result.name, result.variantId), kindLine(result)].concat(blank, [
+      [seg(short(result.patientAt) + ' alone  ', LABEL), badge(result.before.call), seg('   ──▶   ', FAINT),
+       seg('all ' + sites.length + ' hospitals  ', LABEL), badge(result.after.call)]
+    ], blank, [
+      emphasiseNumbers(withShortNames(result.after.headline, sites)),
+      emphasiseNumbers(result.lineReason),
+      modelLine(result)
+    ]);
+    if (result.sameClass.length) lines.push(sameClassLine(result));
+    return lines;
+  }
+
+  // ---- the evidence chart: one row per source, every bar on the same axis ----
+  function evidenceRows(result, chartWidth) {
+    var L = chartLayout(chartWidth), tc = result.tooCommon;
+    var widths = [L.sourceWidth, L.healthyBar, PERCENT_WIDTH, L.sickBar, PERCENT_WIDTH, L.labWidth];
+    var justify = ['left', 'left', 'right', 'left', 'right', 'left'];
+    var overHealthyBar = L.healthyBar ? 'healthy patients' : '', overHealthyNumber = L.healthyBar ? '' : 'healthy';
+    var overSickBar = L.sickBar ? 'sick patients' : '', overSickNumber = L.sickBar ? '' : 'sick';
+    var labHeader = L.compact ? 'lab' : 'lab verdict';
+    var rows = [[[], [seg(overHealthyBar, LABEL)], [seg(overHealthyNumber, LABEL)], [seg(overSickBar, LABEL)], [seg(overSickNumber, LABEL)], [seg(labHeader, LABEL)]]];
+    if (L.healthyBar) rows.push([[], axis(L.healthyBar, tc), [], axis(L.sickBar, tc), [], []]);
+    rows.push(publicDatabaseRow(result, L));
+    result.answers.forEach(function (a) { rows.push(hospitalRow(a, a.site === result.patientAt, L, tc)); });
+    return rows.map(function (cells) { return layoutRow(cells, widths, justify); });
+  }
+  function layoutRow(cells, widths, justify) {
+    // Rich Table.grid with padding (0, 2): fixed columns, a two-space gap, no padding at the edges.
+    var out = [], x = 0;
+    cells.forEach(function (cell, i) {
+      var w = widths[i], text = width(cell);
+      if (w === 0) return;
+      if (x > 0) out.push(seg('  '));
+      var padding = Math.max(0, w - text);
+      if (justify[i] === 'right' && padding) out.push(seg(new Array(padding + 1).join(' ')));
+      cell.forEach(function (s) { out.push(s); });
+      if (justify[i] === 'left' && padding) out.push(seg(new Array(padding + 1).join(' ')));
+      x += w + GAP;
+    });
+    return out;
+  }
+  function publicDatabaseRow(result, L) {
+    var decisive = result.publicFrequency >= result.tooCommon;
+    var name = L.compact ? [seg('  public db', PLAIN)] : [seg('  public database ', PLAIN), seg('Europeans', FAINT)];
+    return [name, bar(result.publicFrequency, decisive ? GREEN : PLAIN, L.healthyBar, result.tooCommon),
+            [decisive ? seg(percent(result.publicFrequency), BRIGHT, true) : seg(percent(result.publicFrequency), PLAIN)], [], [], []];
+  }
+  function hospitalRow(answer, patientIsHere, L, tooCommon) {
+    var site = HQ.data().sites[HQ.siteIndex(answer.site)];
+    var population = L.compact ? '' : ' ' + (POPULATIONS[site.population] || '');
+    var source = patientIsHere ? [seg('▸ ', PATIENT_HERE), seg(short(answer.site), PATIENT_HERE, true), seg(population, FAINT)]
+                               : [seg('  ' + short(answer.site), PLAIN), seg(population, FAINT)];
+    var lab;
+    if (answer.verdict) {
+      lab = [seg(' ' + answer.verdict + ' ', BLACK, false, answer.verdict === 'pathogenic' ? RED : GREEN)];
+      if (!L.compact) lab.push(seg(' ' + stars(answer.stars), LABEL));
+    } else {
+      lab = [seg('—', FAINT)];
+    }
+    var healthy = measured(answer.healthy, GREEN, HQ.isCommon(answer, tooCommon), L.healthyBar, tooCommon);
+    var sick = measured(answer.sick, RED, HQ.isPilingUp(answer, tooCommon), L.sickBar, tooCommon);
+    return [source, healthy[0], healthy[1], sick[0], sick[1], lab];
+  }
+  function measured(count, colour, decisive, w, tooCommon) {
+    var value = count.hidden ? '<' + count.hiddenBelow : percent(count.frequency);
+    var valueSeg = decisive ? seg(value, colour === RED ? RED : BRIGHT, true) : seg(value, PLAIN);
+    return [bar(count.hidden ? null : count.frequency, decisive ? colour : PLAIN, w, tooCommon), [valueSeg]];
+  }
+  function whatTravelledLine(result, minCount) {
+    var others = result.answers.length - 1;
+    var line = [seg('↑ 1 variant name', LABEL), seg('   ', FAINT), seg('↓ counts from ' + others + ' hospitals', LABEL), seg('   ', FAINT),
+                seg('patient records shared ', LABEL), seg('0', BRIGHT, true)];
+    if (!minCount) line.push(seg('   counts under 5 are NOT hidden', YELLOW, true));
+    return line;
+  }
+  function helpLines(sites) {
+    // query_drawing.help_panel(): the keys and what the screen shows, then the hospitals and the two lines that matter.
+    var hospitals = sites.map(function (siteId) {
+      var site = HQ.data().sites[HQ.siteIndex(siteId)];
+      return short(siteId) + ' ' + (POPULATIONS[site.population] || '') + ' ' + HQ.thousands(site.patients);
+    }).join(' · ');
+    var lines = [
+      [seg('The patient query   ', BRIGHT, true),
+       seg('a patient carries a variant; their hospital asks the others how many healthy and how many sick patients carry it', PLAIN)],
+      [],
+      [seg('keys', LABEL)]
+    ];
+    help.keys.forEach(function (k) { lines.push([seg('  ' + pad(k[0], 9), BRIGHT, true), seg(k[1], PLAIN)]); });
+    lines.push([], [seg('what the screen shows', LABEL)]);
+    help.what_you_see.forEach(function (k) { lines.push([seg('  ' + pad(k[0], 15), BRIGHT, true), seg(k[1], PLAIN)]); });
+    lines.push([], [seg('hospitals and patients  ', LABEL), seg(hospitals, PLAIN)],
+               [seg('Counts among sick patients are simulated from the known verdict. Research prototype, not for patient care.', FAINT)],
+               [seg('press any key to close', FAINT)]);
+    return lines;
+  }
+
+  return { seg: seg, width: width, CALLS: CALLS, BORDER: BORDER, PLAIN: PLAIN, LABEL: LABEL, FAINT: FAINT, BRIGHT: BRIGHT,
+           setup: setup, areaLabel: areaLabel, kindLabel: kindLabel, chartLayout: chartLayout, position: position, bar: bar, axis: axis,
+           percent: percent, short: short, listRow: listRow, variantTitle: variantTitle, verdictTitle: verdictTitle,
+           verdictLines: verdictLines, evidenceRows: evidenceRows, whatTravelledLine: whatTravelledLine, helpLines: helpLines };
+})();
+</script>
+
+<script id="demo-app">
+/* The app: scripts/06_query_tui.py in the browser. A 120 x 40 character grid, drawn as an SVG the way Textual exports one. */
+var TERM = (function () {
+  'use strict';
+  var COLS = 120, ROWS = 40, CW = 12.2, LH = 24.4;
+  var CHART_CHROME = 6, MAX_LISTED = 300, TOP_HEIGHT = 15, PICKER_WIDTH = 34, LIST_ROWS = 6, HELP_WIDTH = 116;
+  var UI = {
+    bg: '#121212', panel: '#242f38', border: '#45505a', fg: '#e0e0e0', headerSub: '#a0a3a6', counter: '#a0a0a0',
+    placeholder: '#717171', select: '#1e1e1e', selectFocus: '#272727', arrow: '#7f7f7f', arrowFocus: '#838383', input: '#1b1b1b',
+    cursorBg: '#e0e0e0', cursorFg: '#121212', hlBlur: '#0c304b', hl: '#0178d4', hlText: '#ddedf9',
+    thumb: '#57626d', overlayThumb: '#003054', overlayTrack: '#000000', footerKey: '#ffa62b', footerSep: '#495259',
+    chrome: '#292929', chromeTitle: '#c5c8c6', dim: 0.7
+  };
+  var SELECTS = ['area', 'show', 'gene', 'kind'], SELECT_ROWS = { area: 2, show: 3, gene: 4, kind: 5 };
+  var INPUT_ROW = 7, COUNTER_ROW = 8, LIST_ROW = 9;
+  var FOCUS_ORDER = ['area', 'show', 'gene', 'kind', 'input', 'matches'];
+  var ALL, D, sites, genes, kinds;
+  var S = { area: null, show: 'examples', gene: HQ.ANY_GENE, kind: HQ.ANY_KIND, text: '', typed: '', cursor: 0, cursorAtEnd: true,
+            patientAt: null, minCount: 5, matches: [], lines: [], found: 0, highlighted: null, scroll: 0,
+            focus: 'input', overlay: null, help: false, result: null, travelled: null, cursorOn: true, footerKeys: [] };
+  var APP_KEYS = { f1: 1, f2: 1, f3: 1, escape: 1, tab: 1, '?': 1 };  // the app's own bindings: a Textual Input never sees these
+  var grid, screen, kb;
+
+  // ------------------------------------------------------------------ the grid
+  function clear() {
+    grid = [];
+    for (var r = 0; r < ROWS; r++) { var row = []; for (var c = 0; c < COLS; c++) row.push({ ch: ' ', fg: null, bg: UI.bg, bold: false }); grid.push(row); }
+  }
+  function fill(row, c0, c1, bg) { if (row < 0 || row >= ROWS) return; for (var c = Math.max(0, c0); c < Math.min(COLS, c1); c++) grid[row][c].bg = bg; }
+  function put(row, col, text, fg, bg, bold) {
+    for (var i = 0; i < text.length; i++) {
+      var c = col + i;
+      if (c < 0 || c >= COLS || row < 0 || row >= ROWS) continue;
+      var cell = grid[row][c];
+      cell.ch = text[i]; cell.fg = fg || null; cell.bold = !!bold;
+      if (bg) cell.bg = bg;
+    }
+    return col + text.length;
+  }
+  function putSegs(row, col, segs, bg, bold, maxWidth) {
+    var x = col, limit = maxWidth === undefined ? COLS : col + maxWidth;
+    segs.forEach(function (s) {
+      var text = s.t;
+      if (x + text.length > limit) text = text.slice(0, Math.max(0, limit - x));
+      put(row, x, text, s.fg, s.bg || bg, s.bold || bold);
+      x += text.length;
+    });
+    return x;
+  }
+  function box(row0, col0, w, h, colour, title, clipBelow) {
+    // A round border with its title in the top edge. Rows past clipBelow are not drawn: the container clips them.
+    var last = clipBelow === undefined ? ROWS - 1 : clipBelow, line = new Array(w - 1).join('─');
+    put(row0, col0, '╭' + line + '╮', colour);
+    for (var r = row0 + 1; r < row0 + h - 1 && r <= last; r++) { put(r, col0, '│', colour); put(r, col0 + w - 1, '│', colour); }
+    if (row0 + h - 1 <= last) put(row0 + h - 1, col0, '╰' + line + '╯', colour);
+    if (title && title.length) putSegs(row0, col0 + 2, title, null, false, w - 4);
+  }
+  function wrap(segs, w) {
+    // Rich wraps text at spaces when it is wider than its panel, and folds a word longer than the panel.
+    if (DRAW.width(segs) <= w) return [segs];
+    var lines = [], current = [], x = 0;
+    function push(text, s) { current.push(DRAW.seg(text, s.fg, s.bold, s.bg)); x += text.length; }
+    segs.forEach(function (s) {
+      s.t.split(/( )/).forEach(function (word) {
+        if (!word) return;
+        if (x + word.length > w && x > 0) { lines.push(current); current = []; x = 0; if (word === ' ') return; }
+        while (word.length > w) { push(word.slice(0, w), s); lines.push(current); current = []; x = 0; word = word.slice(w); }
+        if (word) push(word, s);
+      });
+    });
+    if (current.length) lines.push(current);
+    return lines;
+  }
+
+  // ------------------------------------------------------------------ drawing the screen
+  function draw() {
+    clear();
+    drawHeader();
+    drawPicker();
+    drawVerdict();
+    var bottom = drawEvidence();
+    if (S.travelled) putSegs(bottom + 2, 3, S.travelled);
+    drawFooter();
+    drawOverlay();
+    if (S.help) drawHelp();
+    return grid;
+  }
+  function drawHeader() {
+    fill(0, 0, COLS, UI.panel);
+    put(0, 1, '⭘', UI.fg);
+    var title = 'Patient query', sub = " — is this patient's variant harmful? ask the other hospitals";
+    var start = Math.floor((COLS - title.length - sub.length) / 2) - 1;
+    put(0, start, title, UI.fg);
+    put(0, start + title.length, sub, UI.headerSub);
+  }
+  function drawPicker() {
+    box(1, 0, PICKER_WIDTH, TOP_HEIGHT, UI.border, [DRAW.seg(' pick a variant ', UI.border)]);
+    SELECTS.forEach(function (which) { drawSelect(SELECT_ROWS[which], which); });
+    drawInput(INPUT_ROW);
+    put(COUNTER_ROW, 2, counterText(), UI.counter);
+    drawMatches(LIST_ROW, LIST_ROWS);
+  }
+  function selectLabel(which) {
+    var value = selectValue(which), options = selectOptions(which);
+    for (var i = 0; i < options.length; i++) if (options[i][1] === value) return options[i][0];
+    return '';
+  }
+  function drawSelect(row, which) {
+    var focused = S.focus === which && !S.overlay, bg = focused ? UI.selectFocus : UI.select;
+    fill(row, 2, 32, bg);
+    var label = selectLabel(which);
+    if (label.length > 28) label = label.slice(0, 27) + '…';
+    put(row, 2, label, UI.fg, bg);
+    put(row, 30, S.overlay && S.overlay.which === which ? '▲' : '▼', focused ? UI.arrowFocus : UI.arrow, bg);
+  }
+  function drawInput(row) {
+    fill(row, 2, 32, UI.input);
+    var focused = S.focus === 'input' && !S.overlay, showCursor = focused && S.cursorOn;
+    if (!S.typed) {
+      put(row, 2, 'search by name, e.g. N1526', UI.placeholder, UI.input);
+      if (showCursor) put(row, 2, 's', UI.cursorFg, UI.cursorBg);
+      return;
+    }
+    var offset = Math.max(0, S.cursor - 29), view = S.typed.slice(offset, offset + 30);
+    put(row, 2, view, UI.fg, UI.input);
+    if (showCursor) {
+      var c = S.cursor - offset;
+      put(row, 2 + c, c < view.length ? view[c] : ' ', UI.cursorFg, UI.cursorBg);
+    }
+  }
+  function counterText() {
+    if (S.found > MAX_LISTED) return MAX_LISTED + ' of ' + HQ.thousands(S.found) + ' · type to narrow';
+    return HQ.thousands(S.found) + ' variant' + (S.found === 1 ? '' : 's');
+  }
+  function layoutMatches() {
+    // Each option takes as many lines as its text needs at the list's width; the list scrolls by line, like OptionList.
+    var lines = [], w = 30, i;
+    function build(width) {
+      lines = [];
+      for (i = 0; i < S.matches.length; i++) {
+        var entry = S.matches[i];
+        wrap(DRAW.listRow(entry.name, entry.after, entry.type), width).forEach(function (line, k) {
+          lines.push({ option: i, first: k === 0, segs: line });
+        });
+      }
+    }
+    build(w);
+    if (lines.length > LIST_ROWS) { w = 29; build(w); }
+    S.lines = lines;
+    S.listWidth = w;
+  }
+  function optionSpan(index) {
+    var first = -1, last = -1;
+    for (var i = 0; i < S.lines.length; i++) if (S.lines[i].option === index) { if (first < 0) first = i; last = i; }
+    return [first, last];
+  }
+  function drawMatches(row0, height) {
+    var n = S.lines.length, scrollbar = n > height, w = S.listWidth, focused = S.focus === 'matches' && !S.overlay;
+    for (var i = 0; i < height; i++) {
+      var index = S.scroll + i;
+      if (index >= n) break;
+      var line = S.lines[index], hl = line.option === S.highlighted, bg = hl ? (focused ? UI.hl : UI.hlBlur) : null;
+      if (hl) fill(row0 + i, 2, 2 + w, bg);
+      putSegs(row0 + i, 2, line.segs, bg, hl && focused, w);
+    }
+    if (scrollbar) drawScrollbar(row0, 31, 1, height, n, height, S.scroll, UI.thumb, UI.panel);
+  }
+  function drawScrollbar(row0, col, thickness, size, virtualSize, windowSize, position, barColour, backColour) {
+    // textual.scrollbar.ScrollBarRender.render_bar, vertical
+    var bars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', ' '], L = bars.length, cells = [], i;
+    for (i = 0; i < size; i++) cells.push({ ch: ' ', fg: null, bg: backColour });
+    if (windowSize && size && virtualSize && size !== virtualSize) {
+      var barRatio = virtualSize / size, thumbSize = Math.max(1, windowSize / barRatio);
+      var positionRatio = position / (virtualSize - windowSize), pos = (size - thumbSize) * positionRatio;
+      var start = Math.trunc(pos * L), end = start + Math.ceil(thumbSize * L);
+      var startIndex = Math.floor(Math.max(0, start) / L), startBar = Math.max(0, start) % L;
+      var endIndex = Math.floor(Math.max(0, end) / L), endBar = Math.max(0, end) % L;
+      for (i = startIndex; i < Math.min(endIndex, size); i++) cells[i] = { ch: ' ', fg: null, bg: barColour };
+      if (startIndex < size) { var head = bars[L - 1 - startBar]; if (head !== ' ') cells[startIndex] = { ch: head, fg: barColour, bg: backColour }; }
+      if (endIndex < size) { var tail = bars[L - 1 - endBar]; if (tail !== ' ') cells[endIndex] = { ch: tail, fg: backColour, bg: barColour }; }
+    }
+    for (i = 0; i < size; i++) for (var t = 0; t < thickness; t++) put(row0 + i, col + t, cells[i].ch, cells[i].fg, cells[i].bg);
+  }
+  function drawVerdict() {
+    var x = PICKER_WIDTH, w = COLS - PICKER_WIDTH, last = TOP_HEIGHT;
+    if (!S.result) {
+      box(1, x, w, 5, UI.border, null, last);
+      put(3, x + 3, 'no variant matches', UI.fg);  // the terminal draws it in the widget's own colour
+      return;
+    }
+    var colour = DRAW.BORDER[DRAW.CALLS[S.result.after.call].cssClass], lines = [];
+    DRAW.verdictLines(S.result, sites, false).forEach(function (line) { wrap(line, w - 6).forEach(function (l) { lines.push(l); }); });
+    box(1, x, w, lines.length + 4, colour, DRAW.verdictTitle(S.result, colour), last);
+    lines.forEach(function (line, i) { if (3 + i <= last) putSegs(3 + i, x + 3, line, null, false, w - 6); });
+  }
+  function drawEvidence() {
+    var row0 = 1 + TOP_HEIGHT, title = [DRAW.seg(' how common is it? ', UI.border)];
+    if (!S.result) { box(row0, 0, COLS, 3, UI.border, title); return row0 + 2; }
+    var rows = DRAW.evidenceRows(S.result, COLS - CHART_CHROME);
+    box(row0, 0, COLS, rows.length + 2, UI.border, title);
+    rows.forEach(function (line, i) { putSegs(row0 + 1 + i, 3, line, null, false, COLS - CHART_CHROME); });
+    return row0 + rows.length + 1;
+  }
+  function drawFooter() {
+    var row = ROWS - 1;
+    fill(row, 0, COLS, UI.panel);
+    var keys = [['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient'], ['esc', 'Quit']];
+    if (S.overlay) keys = [['esc', 'Dismiss menu'], ['f1', 'Help'], ['f2', 'Hide counts under 5'], ['f3', 'Move the patient']];
+    var x = 0;
+    S.footerKeys = [];
+    keys.forEach(function (k) {
+      var from = x;
+      x = put(row, x, ' ' + k[0] + ' ', UI.footerKey, UI.panel, true);
+      x = put(row, x, k[1] + ' ', UI.fg, UI.panel);
+      S.footerKeys.push({ key: k[0], from: from, to: x });
+    });
+    var palette = '^p palette', right = COLS - palette.length - 1;
+    put(row, right - 1, '▏', UI.footerSep, UI.panel);
+    put(row, right, '^p', UI.footerKey, UI.panel, true);
+    put(row, right + 2, ' palette', UI.fg, UI.panel);
+  }
+  function overlayGeometry(o) {
+    var options = selectOptions(o.which), n = options.length, height = Math.min(12, n);
+    var row0 = SELECT_ROWS[o.which] + 1;
+    if (row0 + height > ROWS) row0 = Math.max(0, ROWS - height);
+    var scrollbar = n > height;
+    return { options: options, n: n, height: height, row0: row0, scrollbar: scrollbar, width: scrollbar ? 28 : 30 };
+  }
+  function drawOverlay() {
+    var o = S.overlay;
+    if (!o) return;
+    var g = overlayGeometry(o);
+    for (var i = 0; i < g.height; i++) {
+      var index = o.scroll + i, row = g.row0 + i, hl = index === o.highlighted;
+      put(row, 2, new Array(31).join(' '), null, UI.selectFocus);  // the overlay covers whatever is beneath it
+      if (hl) fill(row, 2, 2 + g.width, UI.hl);
+      var label = g.options[index][0];
+      if (label.length > g.width) label = label.slice(0, g.width - 1) + '…';
+      put(row, 2, label, hl ? UI.hlText : UI.fg, hl ? UI.hl : UI.selectFocus, hl);
+    }
+    if (g.scrollbar) drawScrollbar(g.row0, 30, 2, g.height, g.n, g.height, o.scroll, UI.overlayThumb, UI.overlayTrack);
+  }
+  function blend(colour, over, alpha) {
+    // Textual composes a modal screen's translucent background over what is beneath it: c1 + (c2 - c1) * alpha, truncated.
+    function channel(i) { var c1 = parseInt(colour.slice(i, i + 2), 16), c2 = parseInt(over.slice(i, i + 2), 16); return Math.trunc(c1 + (c2 - c1) * alpha); }
+    var r = channel(1), g = channel(3), b = channel(5);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+  function drawHelp() {
+    var r, c;
+    for (r = 0; r < ROWS; r++) for (c = 0; c < COLS; c++) {
+      var cell = grid[r][c];
+      cell.bg = blend(cell.bg, UI.bg, UI.dim);
+      if (cell.fg) cell.fg = blend(cell.fg, UI.bg, UI.dim);
+    }
+    // Help > VerticalScroll: width 116, border round, padding 0 2, background $panel, centred on the screen.
+    var inner = HELP_WIDTH - 6, lines = [];
+    DRAW.helpLines(sites).forEach(function (line) { wrap(line, inner).forEach(function (l) { lines.push(l); }); });
+    var h = Math.min(lines.length + 2, ROWS), w = HELP_WIDTH, row0 = Math.floor((ROWS - h) / 2), col0 = Math.floor((COLS - w) / 2);
+    for (r = row0; r < row0 + h; r++) put(r, col0, new Array(w + 1).join(' '), null, UI.panel);  // the box covers what is beneath it
+    box(row0, col0, w, h, UI.border, null);
+    lines.slice(0, h - 2).forEach(function (line, i) { putSegs(row0 + 1 + i, col0 + 3, line, UI.panel, false, inner); });
+  }
+
+  // ------------------------------------------------------------------ the SVG frame, built the way Rich exports one
+  function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/ /g, '&#160;'); }
+  function toSVG() {
+    var W = 1482, H = 1026, TW = COLS * CW, TH = ROWS * LH, out = [];
+    out.push('<svg class="rich-terminal" viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">');
+    out.push('<style>.term-matrix{font-family:"Fira Code","Cascadia Mono","Cascadia Code","JetBrains Mono","DejaVu Sans Mono",Menlo,Consolas,"Liberation Mono",monospace;font-size:20px;line-height:24.4px;font-variant-east-asian:full-width}' +
+             '.term-title{font-size:18px;font-weight:bold;font-family:arial,sans-serif}</style>');
+    out.push('<defs><clipPath id="term-clip"><rect x="0" y="0" width="' + (TW - 1) + '" height="' + (TH - 1) + '"/></clipPath>');
+    for (var r = 0; r < ROWS; r++) out.push('<clipPath id="term-line-' + r + '"><rect x="0" y="' + (1.5 + r * LH).toFixed(1) + '" width="' + TW + '" height="24.65"/></clipPath>');
+    out.push('</defs>');
+    out.push('<rect fill="' + UI.chrome + '" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="' + (W - 2) + '" height="' + (H - 2) + '" rx="8"/>');
+    out.push('<text class="term-title" fill="' + UI.chromeTitle + '" text-anchor="middle" x="' + (W / 2) + '" y="27">Patient&#160;query</text>');
+    out.push('<g transform="translate(26,22)"><circle cx="0" cy="0" r="7" fill="#ff5f57"/><circle cx="22" cy="0" r="7" fill="#febc2e"/><circle cx="44" cy="0" r="7" fill="#28c840"/></g>');
+    out.push('<g transform="translate(9, 41)" clip-path="url(#term-clip)"><g class="term-matrix">');
+    out.push('<rect fill="' + UI.bg + '" x="0" y="0" width="' + TW + '" height="' + TH + '"/>');
+    var rects = [], texts = [];
+    for (r = 0; r < ROWS; r++) {
+      var row = grid[r], c = 0;
+      while (c < COLS) {
+        var cell = row[c], c1 = c + 1;
+        while (c1 < COLS && row[c1].fg === cell.fg && row[c1].bg === cell.bg && row[c1].bold === cell.bold) c1++;
+        var text = '';
+        for (var k = c; k < c1; k++) text += row[k].ch;
+        var x = (c * CW).toFixed(1), y = (1.5 + r * LH).toFixed(1);
+        if (cell.bg !== UI.bg) rects.push('<rect fill="' + cell.bg + '" x="' + x + '" y="' + y + '" width="' + ((c1 - c) * CW).toFixed(1) + '" height="24.65" shape-rendering="crispEdges"/>');
+        if (text.trim()) {
+          texts.push('<text fill="' + (cell.fg || UI.fg) + '"' + (cell.bold ? ' font-weight="bold"' : '') + ' x="' + x + '" y="' + (20 + r * LH).toFixed(1) +
+                     '" textLength="' + ((c1 - c) * CW).toFixed(1) + '" clip-path="url(#term-line-' + r + ')">' + esc(text) + '</text>');
+        }
+        c = c1;
+      }
+    }
+    out.push(rects.join(''), texts.join(''), '</g></g></svg>');
+    return out.join('');
+  }
+  function render() {
+    draw();
+    screen.innerHTML = toSVG();
+    placeKeyboard();
+  }
+  function frame() {
+    var svg = screen.querySelector('svg');
+    if (!svg) return null;
+    var b = svg.getBoundingClientRect(), scale = Math.min(b.width / 1482, b.height / 1026);
+    return { scale: scale, ox: b.left + (b.width - 1482 * scale) / 2 + 9 * scale, oy: b.top + (b.height - 1026 * scale) / 2 + 41 * scale };
+  }
+  function placeKeyboard() {
+    // The hidden input sits over the search box, so a tap there opens the phone's keyboard.
+    var f = frame();
+    if (!f) return;
+    kb.style.left = (f.ox + 2 * CW * f.scale) + 'px';
+    kb.style.top = (f.oy + INPUT_ROW * LH * f.scale) + 'px';
+    kb.style.width = (30 * CW * f.scale) + 'px';
+    kb.style.height = (LH * f.scale) + 'px';
+  }
+  function cellAt(clientX, clientY) {
+    var f = frame();
+    if (!f) return null;
+    var col = Math.floor((clientX - f.ox) / (CW * f.scale)), row = Math.floor((clientY - f.oy - 1.5 * f.scale) / (LH * f.scale));
+    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return null;
+    return { row: row, col: col };
+  }
+
+  // ------------------------------------------------------------------ the dropdowns and the list of variants
+  function showOptions() {
+    var table = HQ.overview(S.patientAt, S.minCount), changed = 0, flagged = 0;
+    for (var i = 0; i < table.length; i++) { if (table[i].changed) changed++; if (table[i].after === 'KEEP FLAGGED') flagged++; }
+    return [['examples to try', 'examples'], ['changed by asking (' + HQ.thousands(changed) + ')', 'changed'],
+            ['kept flagged (' + HQ.thousands(flagged) + ')', 'flagged'], ['all variants (' + HQ.thousands(table.length) + ')', 'all']];
+  }
+  function selectOptions(which) {
+    if (which === 'area') return ALL.area_order.map(function (a) { return [DRAW.areaLabel(a, ALL.areas[a].title), a]; });
+    if (which === 'show') return showOptions();
+    if (which === 'gene') return genes.map(function (g) { return [g, g]; });
+    return [[HQ.ANY_KIND, HQ.ANY_KIND]].concat(kinds.map(function (k) { return [DRAW.kindLabel(k), k]; }));
+  }
+  function selectValue(which) { return which === 'area' ? S.area : which === 'show' ? S.show : which === 'gene' ? S.gene : S.kind; }
+  function setSelectValue(which, value) {
+    if (which === 'area') { switchArea(value); return; }
+    if (which === 'show') S.show = value; else if (which === 'gene') S.gene = value; else S.kind = value;
+    refreshList();
+  }
+  function loadArea(area) {
+    S.area = area;
+    D = ALL.areas[area];
+    HQ.load(D);
+    sites = D.sites.map(function (s) { return s.id; });
+    var geneSet = {}, kindSet = {};
+    HQ.primaries().forEach(function (r) { geneSet[r.gene] = true; kindSet[r.type] = true; });
+    genes = [HQ.ANY_GENE].concat(Object.keys(geneSet).sort());
+    delete kindSet[HQ.MISSENSE];
+    kinds = [HQ.MISSENSE].concat(Object.keys(kindSet).sort());
+  }
+  function switchArea(area) {
+    // Another disease area: its own genes, hospitals and examples. The filters start over.
+    if (area === S.area) return;
+    loadArea(area);
+    if (sites.indexOf(S.patientAt) < 0) S.patientAt = sites[0];
+    S.gene = HQ.ANY_GENE; S.kind = HQ.ANY_KIND; S.text = ''; S.typed = ''; S.cursor = 0;
+    refreshList();
+  }
+  function refreshList() {
+    var table = HQ.overview(S.patientAt, S.minCount);
+    var found = HQ.filterVariants(table, S.show, S.gene, S.text, S.kind);
+    S.found = found.length;
+    S.matches = found.slice(0, MAX_LISTED);
+    layoutMatches();
+    var stayOn = S.highlighted || 0;
+    S.scroll = 0;
+    if (S.matches.length) {
+      S.highlighted = Math.min(stayOn, S.matches.length - 1);
+      scrollToHighlight();
+      ask();
+    } else {
+      S.highlighted = null;
+      S.result = null;
+    }
+  }
+  function scrollToHighlight() {
+    if (S.highlighted === null) return;
+    var span = optionSpan(S.highlighted);
+    if (span[0] < S.scroll) S.scroll = span[0];
+    else if (span[1] >= S.scroll + LIST_ROWS) S.scroll = span[1] - LIST_ROWS + 1;
+  }
+  function moveHighlight(delta, absolute) {
+    if (!S.matches.length) return;
+    var target = absolute !== undefined ? absolute : (S.highlighted === null ? 0 : S.highlighted + delta);
+    S.highlighted = Math.max(0, Math.min(S.matches.length - 1, target));
+    scrollToHighlight();
+    ask();
+  }
+  function ask() {
+    if (S.highlighted === null || !S.matches[S.highlighted]) return;
+    var row = HQ.primary(S.matches[S.highlighted].name);
+    S.result = HQ.query(row, S.patientAt, S.minCount);
+    S.travelled = DRAW.whatTravelledLine(S.result, S.minCount);
+  }
+  function searchAsYouType() {
+    var text = S.typed.trim();
+    S.text = text.toLowerCase().indexOf('chr') === 0 ? text : text.toLowerCase();
+    refreshList();
+  }
+  function toggleHiding() { S.minCount = S.minCount ? 0 : D.rules.min_count; refreshList(); }
+  function movePatient() { S.patientAt = sites[(sites.indexOf(S.patientAt) + 1) % sites.length]; refreshList(); }
+
+  // ------------------------------------------------------------------ keys and the mouse
+  function focusNext(step) {
+    var i = FOCUS_ORDER.indexOf(S.focus);
+    S.focus = FOCUS_ORDER[(i + step + FOCUS_ORDER.length) % FOCUS_ORDER.length];
+  }
+  function openOverlay(which) {
+    var options = selectOptions(which), value = selectValue(which), index = 0;
+    for (var i = 0; i < options.length; i++) if (options[i][1] === value) index = i;
+    S.overlay = { which: which, highlighted: index, scroll: 0 };
+    var g = overlayGeometry(S.overlay);
+    if (index >= g.height) S.overlay.scroll = Math.max(0, Math.min(index, g.n - g.height));  // out of view: Textual scrolls it to the top
+    S.focus = which;
+  }
+  function overlayMove(delta, absolute) {
+    var o = S.overlay, g = overlayGeometry(o);
+    var target = absolute !== undefined ? absolute : o.highlighted + delta;
+    o.highlighted = Math.max(0, Math.min(g.n - 1, target));
+    if (o.highlighted < o.scroll) o.scroll = o.highlighted;
+    else if (o.highlighted >= o.scroll + g.height) o.scroll = o.highlighted - g.height + 1;
+  }
+  function overlayChoose() {
+    var o = S.overlay, options = selectOptions(o.which);
+    S.overlay = null;
+    S.focus = o.which;
+    setSelectValue(o.which, options[o.highlighted][1]);
+  }
+  function press(key, shift) {
+    S.cursorOn = true;
+    if (S.help) { S.help = false; return true; }  // any key closes the help
+    // Until a key reaches the search box, a value set from outside (the address bar) puts the cursor at its end, as Textual does.
+    if (S.focus === 'input' && !S.overlay && !APP_KEYS[key]) S.cursorAtEnd = false;
+    if (key === 'f1' || (key === '?' && !(S.focus === 'input' && !S.overlay))) { S.help = true; return true; }
+    if (key === 'f2') { toggleHiding(); return true; }
+    if (key === 'f3') { movePatient(); return true; }
+    if (S.overlay) {
+      var g = overlayGeometry(S.overlay);
+      if (key === 'escape') S.overlay = null;
+      else if (key === 'enter') overlayChoose();
+      else if (key === 'up') overlayMove(-1);
+      else if (key === 'down') overlayMove(1);
+      else if (key === 'pageup') overlayMove(-g.height);
+      else if (key === 'pagedown') overlayMove(g.height);
+      else if (key === 'home') overlayMove(0, 0);
+      else if (key === 'end') overlayMove(0, g.n - 1);
+      else if (key === 'tab') { S.overlay = null; focusNext(shift ? -1 : 1); }
+      else return false;
+      return true;
+    }
+    if (key === 'tab') { focusNext(shift ? -1 : 1); return true; }
+    if (key === 'escape') return true;  // "esc Quit" in the terminal; in a browser there is nothing to quit
+    if (S.focus === 'input') {
+      if (key === 'up' || key === 'down') { moveHighlight(key === 'down' ? 1 : -1); return true; }
+      if (key === 'left') { S.cursor = Math.max(0, S.cursor - 1); return true; }
+      if (key === 'right') { S.cursor = Math.min(S.typed.length, S.cursor + 1); return true; }
+      if (key === 'home') { S.cursor = 0; return true; }
+      if (key === 'end') { S.cursor = S.typed.length; return true; }
+      if (key === 'backspace') {
+        if (S.cursor > 0) { S.typed = S.typed.slice(0, S.cursor - 1) + S.typed.slice(S.cursor); S.cursor--; searchAsYouType(); }
+        return true;
+      }
+      if (key === 'delete') {
+        if (S.cursor < S.typed.length) { S.typed = S.typed.slice(0, S.cursor) + S.typed.slice(S.cursor + 1); searchAsYouType(); }
+        return true;
+      }
+      if (key === 'enter') return true;
+      if (key.length === 1) {
+        S.typed = S.typed.slice(0, S.cursor) + key + S.typed.slice(S.cursor); S.cursor++;
+        searchAsYouType();
+        return true;
+      }
+      return false;
+    }
+    if (S.focus === 'matches') {
+      if (key === 'up') moveHighlight(-1);
+      else if (key === 'down') moveHighlight(1);
+      else if (key === 'pageup') moveHighlight(-LIST_ROWS);
+      else if (key === 'pagedown') moveHighlight(LIST_ROWS);
+      else if (key === 'home') moveHighlight(0, 0);
+      else if (key === 'end') moveHighlight(0, S.matches.length - 1);
+      else if (key === 'enter') return true;
+      else return false;
+      return true;
+    }
+    // a dropdown has the focus
+    if (key === 'enter' || key === 'space' || key === 'up' || key === 'down') { openOverlay(S.focus); return true; }
+    return false;
+  }
+  function click(row, col) {
+    S.cursorOn = true;
+    if (S.help) { S.help = false; return; }
+    if (S.overlay) {
+      var g = overlayGeometry(S.overlay);
+      if (row >= g.row0 && row < g.row0 + g.height && col >= 2 && col < 32) {
+        var index = S.overlay.scroll + (row - g.row0);
+        if (index < g.n) { S.overlay.highlighted = index; overlayChoose(); }
+      } else {
+        S.overlay = null;
+      }
+      return;
+    }
+    if (col >= 2 && col < 32) {
+      for (var i = 0; i < SELECTS.length; i++) if (SELECT_ROWS[SELECTS[i]] === row) { S.focus = SELECTS[i]; openOverlay(SELECTS[i]); return; }
+      if (row === INPUT_ROW) { S.focus = 'input'; S.cursor = Math.min(S.typed.length, Math.max(0, col - 2 + Math.max(0, S.cursor - 29))); return; }
+      if (row >= LIST_ROW && row < LIST_ROW + LIST_ROWS) {
+        var line = S.lines[S.scroll + (row - LIST_ROW)];
+        S.focus = 'matches';
+        if (line) moveHighlight(0, line.option);
+        return;
+      }
+    }
+    if (row === ROWS - 1) {
+      for (var k = 0; k < S.footerKeys.length; k++) {
+        var key = S.footerKeys[k];
+        if (col >= key.from && col < key.to) { press(key.key === 'esc' ? 'escape' : key.key); return; }
+      }
+    }
+  }
+  function wheel(row, col, direction) {
+    if (S.help) return;
+    if (S.overlay) {
+      var g = overlayGeometry(S.overlay);
+      if (row >= g.row0 && row < g.row0 + g.height) S.overlay.scroll = Math.max(0, Math.min(g.n - g.height, S.overlay.scroll + direction));
+      return;
+    }
+    if (row >= LIST_ROW && row < LIST_ROW + LIST_ROWS && col >= 2 && col < 32) {
+      S.scroll = Math.max(0, Math.min(Math.max(0, S.lines.length - LIST_ROWS), S.scroll + direction));
+    }
+  }
+  var KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Home: 'home', End: 'end', PageUp: 'pageup',
+               PageDown: 'pagedown', Enter: 'enter', Escape: 'escape', Tab: 'tab', Backspace: 'backspace', Delete: 'delete',
+               F1: 'f1', F2: 'f2', F3: 'f3', ' ': 'space' };
+  function onKeydown(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var key = KEYS[e.key] || (e.key.length === 1 ? e.key : null);
+    if (!key) return;
+    if (key === 'space' && S.focus === 'input' && !S.overlay) key = ' ';
+    if (press(key, e.shiftKey)) { e.preventDefault(); kb.value = ''; render(); writeHash(); }
+  }
+  function onInput() {
+    // A phone keyboard reports no key names: take the typed text from the field instead.
+    var value = kb.value;
+    kb.value = '';
+    if (!value || S.overlay || S.help || S.focus !== 'input') return;
+    for (var i = 0; i < value.length; i++) press(value[i]);
+    render(); writeHash();
+  }
+
+  // ------------------------------------------------------------------ the address bar: #v=DSP N1526K&at=site_lagos&min=0
+  function writeHash() {
+    var parts = [];
+    if (S.area !== ALL.default_area) parts.push('area=' + encodeURIComponent(S.area));
+    if (S.typed) parts.push('v=' + encodeURIComponent(S.typed));
+    if (S.patientAt !== sites[0]) parts.push('at=' + encodeURIComponent(S.patientAt));
+    if (S.minCount !== D.rules.min_count) parts.push('min=' + S.minCount);
+    var hash = parts.length ? '#' + parts.join('&') : '';
+    if (location.hash !== hash && (hash || location.hash)) history.replaceState(null, '', location.pathname + location.search + hash);
+  }
+  function readHash() {
+    var out = {};
+    location.hash.replace(/^#/, '').split('&').forEach(function (p) {
+      var i = p.indexOf('=');
+      if (i > 0) out[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+    });
+    return out;
+  }
+
+  // ------------------------------------------------------------------ start
+  function start(data) {
+    screen = screen || document.getElementById('screen');
+    kb = kb || document.getElementById('kb');
+    ALL = data;
+    DRAW.setup(ALL);
+    var wanted = readHash();
+    loadArea(wanted.area && ALL.areas[wanted.area] ? wanted.area : ALL.default_area);
+    S.patientAt = sites[0];
+    S.minCount = D.rules.min_count;
+    if (wanted.at && sites.indexOf(wanted.at) >= 0) S.patientAt = wanted.at;
+    if (wanted.min !== undefined && !isNaN(parseInt(wanted.min, 10)) && parseInt(wanted.min, 10) >= 0) S.minCount = parseInt(wanted.min, 10);
+    if (wanted.v) { S.typed = wanted.v; S.cursor = S.typed.length; searchAsYouType(); } else refreshList();
+    render();
+
+    screen.addEventListener('mousedown', function (e) {
+      var cell = cellAt(e.clientX, e.clientY);
+      if (!cell) return;
+      e.preventDefault();
+      click(cell.row, cell.col);
+      render(); writeHash();
+      kb.focus({ preventScroll: true });
+    });
+    screen.addEventListener('wheel', function (e) {
+      var cell = cellAt(e.clientX, e.clientY);
+      if (!cell) return;
+      var before = JSON.stringify([S.scroll, S.overlay && S.overlay.scroll]);
+      wheel(cell.row, cell.col, e.deltaY > 0 ? 1 : -1);
+      if (JSON.stringify([S.scroll, S.overlay && S.overlay.scroll]) !== before) { e.preventDefault(); render(); }
+    }, { passive: false });
+    kb.addEventListener('keydown', onKeydown);
+    kb.addEventListener('input', onInput);
+    document.addEventListener('keydown', function (e) { if (e.target !== kb) onKeydown(e); });
+    window.addEventListener('resize', placeKeyboard);
+    kb.focus({ preventScroll: true });
+    setInterval(function () {
+      if (S.focus === 'input' && !S.overlay && !S.help) { S.cursorOn = !S.cursorOn; render(); }
+      else if (!S.cursorOn) { S.cursorOn = true; }
+    }, 500);
+  }
+  function boot() {
+    screen = document.getElementById('screen');
+    kb = document.getElementById('kb');
+    var el = document.getElementById('demo-data');
+    if (el.type === 'application/json') { start(JSON.parse(el.textContent)); return; }
+    if (typeof DecompressionStream === 'undefined') {
+      screen.innerHTML = '<div id="note">This browser cannot unpack the data inside the page (it has no DecompressionStream). ' +
+                         'Open it in a current Chrome, Edge, Firefox or Safari.</div>';
+      return;
+    }
+    var binary = atob(el.textContent.replace(/\s+/g, '')), bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    var stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    new Response(stream).text().then(function (text) { start(JSON.parse(text)); }).catch(function (err) {
+      screen.innerHTML = '<div id="note">The data inside the page could not be unpacked: ' + String(err) + '</div>';
+    });
+  }
+
+  // For checks: drive the screen the way a Textual pilot does, and read the grid back.
+  return {
+    boot: boot, start: start, press: function (key, shift) { press(key, shift); render(); }, state: function () { return S; },
+    grid: function () { draw(); return grid.map(function (row) { return row.map(function (c) { return [c.ch, c.fg, c.bg, c.bold]; }); }); },
+    setValue: function (text) { S.typed = text; S.cursor = S.cursorAtEnd ? text.length : Math.min(S.cursor, text.length); searchAsYouType(); render(); },
+    setSelect: function (which, value) { setSelectValue(which, value); render(); },
+    focus: function (which) { S.focus = which; S.overlay = null; render(); },
+    click: function (row, col) { click(row, col); render(); },
+    cursorDown: function (n) { for (var i = 0; i < n; i++) moveHighlight(1); render(); },
+    cursorOn: function (on) { S.cursorOn = on; render(); },
+    reset: function () {
+      if (S.area !== ALL.default_area) loadArea(ALL.default_area);
+      S.show = 'examples'; S.gene = HQ.ANY_GENE; S.kind = HQ.ANY_KIND; S.text = ''; S.typed = ''; S.cursor = 0; S.cursorAtEnd = true;
+      S.patientAt = sites[0]; S.minCount = D.rules.min_count; S.highlighted = null; S.scroll = 0; S.focus = 'input';
+      S.overlay = null; S.help = false; S.result = null; S.travelled = null; S.cursorOn = true;
+      refreshList(); render();
+    },
+    render: render
+  };
+})();
+document.addEventListener('DOMContentLoaded', TERM.boot);
+</script>
+</body>
+</html>
