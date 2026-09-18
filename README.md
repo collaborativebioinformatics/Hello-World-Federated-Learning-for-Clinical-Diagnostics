@@ -1,6 +1,6 @@
 # Hello World! Federated Learning for Clinical Diagnostics
 
-**[Try it in your browser](https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/)**: the patient query, the pipeline in motion and the manuscript as one website. The query on its own is at [collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/](https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/), and it is the same screen as the terminal one below.
+**[Try it in your browser](https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/)**: the patient query, the pipeline in motion and the manuscript as one website. The query opens first, and it is the same screen as the terminal one below.
 
 Can hospitals help each other judge a patient's DNA variant while every patient record stays where it is?
 
