@@ -1,0 +1,2080 @@
+{
+  "date": "2026-09-18",
+  "source": "https://panelapp.genomicsengland.co.uk/api/v1/panels/signedoff/",
+  "panel_count": 296,
+  "unique_green_genes": 4206,
+  "panels": [
+    {
+      "id": 3,
+      "name": "Stickler syndrome",
+      "version": "4.11",
+      "signed_off": "2026-08-12",
+      "green_genes": 9
+    },
+    {
+      "id": 9,
+      "name": "Differences in sex development",
+      "version": "4.22",
+      "signed_off": "2026-08-12",
+      "green_genes": 44
+    },
+    {
+      "id": 13,
+      "name": "Brugada syndrome and cardiac sodium channel disease",
+      "version": "3.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 25,
+      "name": "Congenital disorders of glycosylation",
+      "version": "8.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 102
+    },
+    {
+      "id": 31,
+      "name": "Congenital hypothyroidism",
+      "version": "4.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 30
+    },
+    {
+      "id": 49,
+      "name": "Hypertrophic cardiomyopathy",
+      "version": "6.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 24
+    },
+    {
+      "id": 53,
+      "name": "Ehlers Danlos syndrome with a likely monogenic cause",
+      "version": "4.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 49
+    },
+    {
+      "id": 55,
+      "name": "Breast cancer pertinent cancer susceptibility",
+      "version": "2.0",
+      "signed_off": "2023-03-22",
+      "green_genes": 4
+    },
+    {
+      "id": 59,
+      "name": "Haematological malignancies cancer susceptibility",
+      "version": "5.0",
+      "signed_off": "2026-05-06",
+      "green_genes": 88
+    },
+    {
+      "id": 65,
+      "name": "Primary lymphoedema",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 41
+    },
+    {
+      "id": 66,
+      "name": "Rhabdomyolysis and metabolic muscle disorders",
+      "version": "6.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 64
+    },
+    {
+      "id": 76,
+      "name": "Long QT syndrome",
+      "version": "3.14",
+      "signed_off": "2026-08-12",
+      "green_genes": 9
+    },
+    {
+      "id": 77,
+      "name": "Xeroderma pigmentosum, Trichothiodystrophy or Cockayne syndrome",
+      "version": "3.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 16
+    },
+    {
+      "id": 78,
+      "name": "Holoprosencephaly",
+      "version": "6.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 16
+    },
+    {
+      "id": 79,
+      "name": "Paediatric motor neuronopathies",
+      "version": "3.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 14
+    },
+    {
+      "id": 81,
+      "name": "Clefting",
+      "version": "7.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 163
+    },
+    {
+      "id": 83,
+      "name": "Membranoproliferative glomerulonephritis including C3 glomerulopathy",
+      "version": "3.14",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 96,
+      "name": "Malformations of cortical development",
+      "version": "8.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 111
+    },
+    {
+      "id": 98,
+      "name": "Segmental overgrowth disorders - Deep sequencing",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 13
+    },
+    {
+      "id": 99,
+      "name": "Haematuria",
+      "version": "2.19",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 105,
+      "name": "Pneumothorax - familial",
+      "version": "3.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 10
+    },
+    {
+      "id": 106,
+      "name": "Proteinuric renal disease",
+      "version": "6.13",
+      "signed_off": "2026-08-12",
+      "green_genes": 59
+    },
+    {
+      "id": 112,
+      "name": "Mitochondrial disorders",
+      "version": "10.18",
+      "signed_off": "2026-08-12",
+      "green_genes": 311
+    },
+    {
+      "id": 117,
+      "name": "Ovarian cancer pertinent cancer susceptibility",
+      "version": "2.0",
+      "signed_off": "2023-03-22",
+      "green_genes": 8
+    },
+    {
+      "id": 123,
+      "name": "Hereditary haemorrhagic telangiectasia",
+      "version": "3.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 126,
+      "name": "Monogenic hearing loss",
+      "version": "6.34",
+      "signed_off": "2026-08-12",
+      "green_genes": 165
+    },
+    {
+      "id": 130,
+      "name": "Severe early-onset obesity",
+      "version": "7.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 33
+    },
+    {
+      "id": 134,
+      "name": "Arrhythmogenic right ventricular cardiomyopathy",
+      "version": "3.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 10
+    },
+    {
+      "id": 139,
+      "name": "Atypical haemolytic uraemic syndrome",
+      "version": "3.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 9
+    },
+    {
+      "id": 143,
+      "name": "Inherited ovarian cancer (without breast cancer)",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 9
+    },
+    {
+      "id": 145,
+      "name": "Congenital adrenal hypoplasia",
+      "version": "5.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 16
+    },
+    {
+      "id": 147,
+      "name": "Cerebral vascular malformations",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 18
+    },
+    {
+      "id": 149,
+      "name": "Nephrocalcinosis or nephrolithiasis",
+      "version": "6.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 35
+    },
+    {
+      "id": 157,
+      "name": "Hereditary Erythrocytosis",
+      "version": "3.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 11
+    },
+    {
+      "id": 162,
+      "name": "Severe microcephaly",
+      "version": "9.13",
+      "signed_off": "2026-08-12",
+      "green_genes": 208
+    },
+    {
+      "id": 166,
+      "name": "Brain cancer pertinent cancer susceptibility",
+      "version": "1.0",
+      "signed_off": "2021-09-29",
+      "green_genes": 7
+    },
+    {
+      "id": 168,
+      "name": "Rare syndromic craniosynostosis or isolated multisuture synostosis",
+      "version": "7.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 82
+    },
+    {
+      "id": 179,
+      "name": "Hydrocephalus",
+      "version": "5.14",
+      "signed_off": "2026-08-12",
+      "green_genes": 76
+    },
+    {
+      "id": 185,
+      "name": "Limb girdle muscular dystrophies, myofibrillar myopathies and distal myopathies",
+      "version": "6.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 71
+    },
+    {
+      "id": 186,
+      "name": "Optic neuropathy",
+      "version": "6.46",
+      "signed_off": "2026-08-12",
+      "green_genes": 44
+    },
+    {
+      "id": 193,
+      "name": "Pulmonary arterial hypertension",
+      "version": "4.14",
+      "signed_off": "2026-08-12",
+      "green_genes": 13
+    },
+    {
+      "id": 196,
+      "name": "Osteogenesis imperfecta",
+      "version": "6.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 36
+    },
+    {
+      "id": 207,
+      "name": "Congenital muscular dystrophy",
+      "version": "7.26",
+      "signed_off": "2026-08-12",
+      "green_genes": 47
+    },
+    {
+      "id": 214,
+      "name": "Catecholaminergic polymorphic VT",
+      "version": "5.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 224,
+      "name": "Short QT syndrome",
+      "version": "3.23",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 225,
+      "name": "Congenital myopathy",
+      "version": "7.77",
+      "signed_off": "2026-08-12",
+      "green_genes": 79
+    },
+    {
+      "id": 230,
+      "name": "Bilateral congenital or childhood onset cataracts",
+      "version": "8.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 119
+    },
+    {
+      "id": 232,
+      "name": "Congenital myaesthenic syndrome",
+      "version": "6.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 27
+    },
+    {
+      "id": 235,
+      "name": "Distal myopathies",
+      "version": "7.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 24
+    },
+    {
+      "id": 236,
+      "name": "Hyperthyroidism",
+      "version": "3.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 243,
+      "name": "Childhood solid tumours",
+      "version": "5.11",
+      "signed_off": "2026-05-06",
+      "green_genes": 85
+    },
+    {
+      "id": 245,
+      "name": "Adult solid tumours cancer susceptibility",
+      "version": "2.2",
+      "signed_off": "2020-02-18",
+      "green_genes": 82
+    },
+    {
+      "id": 258,
+      "name": "Arthrogryposis",
+      "version": "10.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 160
+    },
+    {
+      "id": 269,
+      "name": "Amelogenesis imperfecta",
+      "version": "4.37",
+      "signed_off": "2026-08-12",
+      "green_genes": 31
+    },
+    {
+      "id": 283,
+      "name": "Cystic kidney disease",
+      "version": "9.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 38
+    },
+    {
+      "id": 285,
+      "name": "Intellectual disability",
+      "version": "11.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 1513
+    },
+    {
+      "id": 292,
+      "name": "Renal tubulopathies",
+      "version": "6.9",
+      "signed_off": "2026-08-12",
+      "green_genes": 52
+    },
+    {
+      "id": 293,
+      "name": "Neonatal diabetes",
+      "version": "6.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 34
+    },
+    {
+      "id": 307,
+      "name": "Retinal disorders",
+      "version": "9.14",
+      "signed_off": "2026-08-12",
+      "green_genes": 301
+    },
+    {
+      "id": 308,
+      "name": "Congenital hyperinsulinism",
+      "version": "3.9",
+      "signed_off": "2026-08-12",
+      "green_genes": 20
+    },
+    {
+      "id": 309,
+      "name": "Skeletal dysplasia",
+      "version": "10.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 440
+    },
+    {
+      "id": 312,
+      "name": "Familial hypoparathyroidism",
+      "version": "3.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 384,
+      "name": "Limb disorders",
+      "version": "9.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 157
+    },
+    {
+      "id": 386,
+      "name": "Pancreatitis",
+      "version": "3.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 398,
+      "name": "Primary immunodeficiency or monogenic inflammatory bowel disease",
+      "version": "9.91",
+      "signed_off": "2026-08-12",
+      "green_genes": 374
+    },
+    {
+      "id": 402,
+      "name": "Early onset or syndromic epilepsy",
+      "version": "9.56",
+      "signed_off": "2026-08-12",
+      "green_genes": 632
+    },
+    {
+      "id": 465,
+      "name": "Other rare neuromuscular disorders",
+      "version": "31.135",
+      "signed_off": "2026-08-12",
+      "green_genes": 234
+    },
+    {
+      "id": 466,
+      "name": "Hereditary ataxia, adult onset",
+      "version": "9.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 164
+    },
+    {
+      "id": 467,
+      "name": "Likely inborn error of metabolism",
+      "version": "9.29",
+      "signed_off": "2026-08-12",
+      "green_genes": 795
+    },
+    {
+      "id": 472,
+      "name": "Monogenic diabetes",
+      "version": "3.26",
+      "signed_off": "2026-08-12",
+      "green_genes": 37
+    },
+    {
+      "id": 474,
+      "name": "Neurodegenerative disorders, adult onset",
+      "version": "9.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 120
+    },
+    {
+      "id": 476,
+      "name": "White matter disorders and cerebral calcification - childhood onset",
+      "version": "8.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 194
+    },
+    {
+      "id": 477,
+      "name": "Ataxia and cerebellar anomalies - childhood onset",
+      "version": "9.22",
+      "signed_off": "2026-08-12",
+      "green_genes": 239
+    },
+    {
+      "id": 478,
+      "name": "Fetal anomalies",
+      "version": "8.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 1695
+    },
+    {
+      "id": 479,
+      "name": "Paediatric disorders - additional genes",
+      "version": "8.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 62
+    },
+    {
+      "id": 480,
+      "name": "Familial hyperparathyroidism or Hypocalciuric hypercalcaemia",
+      "version": "3.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 482,
+      "name": "Hypophosphataemia or rickets",
+      "version": "4.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 13
+    },
+    {
+      "id": 483,
+      "name": "Pituitary hormone deficiency",
+      "version": "4.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 30
+    },
+    {
+      "id": 484,
+      "name": "DDG2P",
+      "version": "8.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 2195
+    },
+    {
+      "id": 486,
+      "name": "Paediatric disorders",
+      "version": "76.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 2992
+    },
+    {
+      "id": 487,
+      "name": "Cystic renal disease",
+      "version": "13.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 97
+    },
+    {
+      "id": 488,
+      "name": "Hereditary ataxia and cerebellar anomalies, childhood onset",
+      "version": "23.32",
+      "signed_off": "2026-08-12",
+      "green_genes": 379
+    },
+    {
+      "id": 490,
+      "name": "Hypotonic infant",
+      "version": "47.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 2073
+    },
+    {
+      "id": 491,
+      "name": "Cerebral malformation",
+      "version": "16.11",
+      "signed_off": "2026-08-12",
+      "green_genes": 129
+    },
+    {
+      "id": 496,
+      "name": "Leukodystrophy, childhood onset",
+      "version": "32.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 1968
+    },
+    {
+      "id": 502,
+      "name": "Hereditary systemic amyloidosis",
+      "version": "1.30",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 503,
+      "name": "Inherited MMR deficiency (Lynch syndrome)",
+      "version": "1.15",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 504,
+      "name": "Inherited polyposis and early onset colorectal cancer - germline testing",
+      "version": "4.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 17
+    },
+    {
+      "id": 506,
+      "name": "Progressive cardiac conduction disease",
+      "version": "2.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 11
+    },
+    {
+      "id": 507,
+      "name": "Common craniosynostosis syndromes",
+      "version": "1.18",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 508,
+      "name": "Fanconi anaemia or Bloom syndrome",
+      "version": "2.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 19
+    },
+    {
+      "id": 509,
+      "name": "Structural eye disease",
+      "version": "5.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 148
+    },
+    {
+      "id": 510,
+      "name": "Sporadic aniridia",
+      "version": "3.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 3
+    },
+    {
+      "id": 511,
+      "name": "Albinism or congenital nystagmus",
+      "version": "4.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 30
+    },
+    {
+      "id": 512,
+      "name": "Congenital fibrosis of the extraocular muscles",
+      "version": "2.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 513,
+      "name": "Non-acute porphyrias",
+      "version": "2.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 514,
+      "name": "Intestinal failure or congenital diarrhoea",
+      "version": "3.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 45
+    },
+    {
+      "id": 515,
+      "name": "Iron metabolism disorders - NOT common HFE mutations",
+      "version": "4.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 18
+    },
+    {
+      "id": 516,
+      "name": "Thrombophilia with a likely monogenic cause",
+      "version": "3.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 14
+    },
+    {
+      "id": 517,
+      "name": "Combined factor V and VIII deficiency",
+      "version": "1.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 518,
+      "name": "Rare anaemia",
+      "version": "4.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 80
+    },
+    {
+      "id": 519,
+      "name": "Cytopenia - NOT Fanconi anaemia",
+      "version": "5.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 67
+    },
+    {
+      "id": 521,
+      "name": "Inherited renal cancer",
+      "version": "1.30",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 522,
+      "name": "Familial melanoma",
+      "version": "2.15",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 523,
+      "name": "Inherited predisposition to GIST",
+      "version": "1.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 524,
+      "name": "Inherited pancreatic cancer",
+      "version": "3.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 525,
+      "name": "Inherited predisposition to acute myeloid leukaemia (AML)",
+      "version": "3.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 11
+    },
+    {
+      "id": 526,
+      "name": "Neuronal ceroid lipofuscinosis",
+      "version": "3.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 14
+    },
+    {
+      "id": 527,
+      "name": "Familial Chylomicronaemia Syndrome",
+      "version": "3.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 528,
+      "name": "Glycogen storage disease",
+      "version": "2.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 29
+    },
+    {
+      "id": 529,
+      "name": "Lysosomal storage disorder",
+      "version": "3.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 55
+    },
+    {
+      "id": 531,
+      "name": "Pyruvate dehydrogenase (PDH) deficiency",
+      "version": "1.41",
+      "signed_off": "2026-08-12",
+      "green_genes": 24
+    },
+    {
+      "id": 532,
+      "name": "Mitochondrial liver disease",
+      "version": "1.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 533,
+      "name": "Mitochondrial DNA maintenance disorder",
+      "version": "3.10",
+      "signed_off": "2026-08-12",
+      "green_genes": 25
+    },
+    {
+      "id": 534,
+      "name": "Mitochondrial disorder with complex I deficiency",
+      "version": "4.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 36
+    },
+    {
+      "id": 535,
+      "name": "Mitochondrial disorder with complex II deficiency",
+      "version": "2.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 536,
+      "name": "Mitochondrial disorder with complex III deficiency",
+      "version": "2.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 537,
+      "name": "Mitochondrial disorder with complex IV deficiency",
+      "version": "5.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 21
+    },
+    {
+      "id": 538,
+      "name": "Mitochondrial disorder with complex V deficiency",
+      "version": "3.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 539,
+      "name": "Possible mitochondrial disorder, nuclear genes",
+      "version": "5.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 255
+    },
+    {
+      "id": 540,
+      "name": "Dystonia, chorea or related movement disorder, adult onset",
+      "version": "6.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 67
+    },
+    {
+      "id": 541,
+      "name": "Paroxysmal central nervous system disorders",
+      "version": "4.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 20
+    },
+    {
+      "id": 542,
+      "name": "Skeletal muscle channelopathy",
+      "version": "3.9",
+      "signed_off": "2026-08-12",
+      "green_genes": 10
+    },
+    {
+      "id": 543,
+      "name": "Bardet Biedl syndrome",
+      "version": "2.18",
+      "signed_off": "2026-08-12",
+      "green_genes": 17
+    },
+    {
+      "id": 544,
+      "name": "Cholestasis",
+      "version": "4.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 58
+    },
+    {
+      "id": 545,
+      "name": "Bleeding and platelet disorders",
+      "version": "4.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 92
+    },
+    {
+      "id": 546,
+      "name": "Severe insulin resistance and lipodystrophy syndromes",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 27
+    },
+    {
+      "id": 548,
+      "name": "Tubulointerstitial kidney disease",
+      "version": "3.34",
+      "signed_off": "2026-08-12",
+      "green_genes": 20
+    },
+    {
+      "id": 549,
+      "name": "Laterality disorders and isomerism",
+      "version": "5.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 35
+    },
+    {
+      "id": 550,
+      "name": "Respiratory ciliopathies including non-CF bronchiectasis",
+      "version": "5.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 62
+    },
+    {
+      "id": 552,
+      "name": "Familial tumoral calcinosis",
+      "version": "1.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 553,
+      "name": "Ectodermal dysplasia",
+      "version": "5.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 46
+    },
+    {
+      "id": 554,
+      "name": "Epidermolysis bullosa and congenital skin fragility",
+      "version": "2.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 30
+    },
+    {
+      "id": 555,
+      "name": "Ichthyosis and erythrokeratoderma",
+      "version": "4.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 62
+    },
+    {
+      "id": 556,
+      "name": "Palmoplantar keratodermas",
+      "version": "4.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 59
+    },
+    {
+      "id": 557,
+      "name": "Autosomal recessive primary hypertrophic osteoarthropathy",
+      "version": "2.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 558,
+      "name": "Multiple monogenic benign skin tumours",
+      "version": "2.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 6
+    },
+    {
+      "id": 559,
+      "name": "Pigmentary skin disorders",
+      "version": "5.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 109
+    },
+    {
+      "id": 560,
+      "name": "Cutaneous photosensitivity with a likely genetic cause",
+      "version": "3.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 11
+    },
+    {
+      "id": 562,
+      "name": "Epidermodysplasia verruciformis",
+      "version": "1.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 3
+    },
+    {
+      "id": 563,
+      "name": "Vascular skin disorders",
+      "version": "2.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 23
+    },
+    {
+      "id": 564,
+      "name": "Mosaic skin disorders - Deep sequencing",
+      "version": "4.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 39
+    },
+    {
+      "id": 565,
+      "name": "Rare genetic inflammatory skin disorders",
+      "version": "4.25",
+      "signed_off": "2026-08-12",
+      "green_genes": 33
+    },
+    {
+      "id": 566,
+      "name": "Primary pigmented nodular adrenocortical disease",
+      "version": "1.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 567,
+      "name": "Hereditary spastic paraplegia, adult onset",
+      "version": "6.13",
+      "signed_off": "2026-08-12",
+      "green_genes": 53
+    },
+    {
+      "id": 568,
+      "name": "Hereditary spastic paraplegia, childhood onset",
+      "version": "9.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 121
+    },
+    {
+      "id": 579,
+      "name": "Leukodystrophy, adult onset",
+      "version": "7.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 81
+    },
+    {
+      "id": 635,
+      "name": "Inherited breast cancer and ovarian cancer",
+      "version": "3.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 648,
+      "name": "Endocrine neoplasia",
+      "version": "3.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 649,
+      "name": "Inherited phaeochromocytoma and paraganglioma excluding NF1",
+      "version": "5.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 11
+    },
+    {
+      "id": 650,
+      "name": "Hypogonadotropic hypogonadism (GMS)",
+      "version": "5.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 28
+    },
+    {
+      "id": 652,
+      "name": "Dilated and arrhythmogenic cardiomyopathy",
+      "version": "4.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 35
+    },
+    {
+      "id": 653,
+      "name": "Polycystic liver disease",
+      "version": "1.33",
+      "signed_off": "2026-08-12",
+      "green_genes": 9
+    },
+    {
+      "id": 658,
+      "name": "Corneal dystrophy",
+      "version": "4.11",
+      "signed_off": "2026-08-12",
+      "green_genes": 22
+    },
+    {
+      "id": 678,
+      "name": "Unexplained young onset end-stage renal disease",
+      "version": "13.34",
+      "signed_off": "2026-08-12",
+      "green_genes": 260
+    },
+    {
+      "id": 700,
+      "name": "Thoracic aortic aneurysm or dissection (GMS)",
+      "version": "5.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 35
+    },
+    {
+      "id": 722,
+      "name": "Ophthalmological ciliopathies",
+      "version": "6.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 67
+    },
+    {
+      "id": 724,
+      "name": "Neurological ciliopathies",
+      "version": "7.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 53
+    },
+    {
+      "id": 725,
+      "name": "Renal ciliopathies",
+      "version": "5.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 77
+    },
+    {
+      "id": 726,
+      "name": "Skeletal ciliopathies",
+      "version": "7.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 36
+    },
+    {
+      "id": 728,
+      "name": "Rare multisystem ciliopathy Super panel",
+      "version": "22.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 115
+    },
+    {
+      "id": 734,
+      "name": "Sarcoma susceptibility",
+      "version": "1.2",
+      "signed_off": "2020-02-18",
+      "green_genes": 8
+    },
+    {
+      "id": 736,
+      "name": "Neurological segmental overgrowth",
+      "version": "3.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 749,
+      "name": "Paediatric or syndromic cardiomyopathy",
+      "version": "8.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 138
+    },
+    {
+      "id": 772,
+      "name": "Familial hypercholesterolaemia (GMS)",
+      "version": "2.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 841,
+      "name": "Sudden unexplained death or survivors of a cardiac event",
+      "version": "23.18",
+      "signed_off": "2026-08-12",
+      "green_genes": 58
+    },
+    {
+      "id": 842,
+      "name": "Cardiac arrhythmias",
+      "version": "14.31",
+      "signed_off": "2026-08-12",
+      "green_genes": 14
+    },
+    {
+      "id": 843,
+      "name": "Cardiac arrhythmias - additional genes",
+      "version": "3.12",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 846,
+      "name": "Hereditary neuropathy or pain disorder",
+      "version": "8.30",
+      "signed_off": "2026-08-12",
+      "green_genes": 231
+    },
+    {
+      "id": 847,
+      "name": "Dystonia, chorea or related movement disorder, childhood onset",
+      "version": "8.13",
+      "signed_off": "2026-08-12",
+      "green_genes": 191
+    },
+    {
+      "id": 943,
+      "name": "Osteopetrosis",
+      "version": "2.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 18
+    },
+    {
+      "id": 945,
+      "name": "Thrombocythaemia",
+      "version": "2.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 4
+    },
+    {
+      "id": 1075,
+      "name": "Autoinflammatory disorders",
+      "version": "3.16",
+      "signed_off": "2026-08-12",
+      "green_genes": 32
+    },
+    {
+      "id": 1076,
+      "name": "Malignant hyperthermia",
+      "version": "1.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 3
+    },
+    {
+      "id": 1109,
+      "name": "Multi Locus Imprinting Disorder (MLID)",
+      "version": "2.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 1141,
+      "name": "Acute rhabdomyolysis",
+      "version": "3.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 52
+    },
+    {
+      "id": 1174,
+      "name": "Pulmonary Fibrosis, Familial",
+      "version": "1.17",
+      "signed_off": "2026-08-12",
+      "green_genes": 25
+    },
+    {
+      "id": 1207,
+      "name": "Acute intermittent porphyria",
+      "version": "2.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1208,
+      "name": "Agammaglobulinaemia with absent BTK expression",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1209,
+      "name": "Albright hereditary osteodystrophy, pseudohypoparathyroidism, pseudopseudohypoparathyroidism, acrodysostosis and osteoma cutis",
+      "version": "2.0",
+      "signed_off": "2026-08-12",
+      "green_genes": 3
+    },
+    {
+      "id": 1210,
+      "name": "Alstrom syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1211,
+      "name": "Alveolar capillary dysplasia with misalignment of pulmonary veins",
+      "version": "1.9",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1212,
+      "name": "APC associated Polyposis",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1213,
+      "name": "Ataxia telangiectasia - mutation testing",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1214,
+      "name": "Autoimmune lymphoproliferative syndrome with defective apoptosis",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1215,
+      "name": "Autoimmune Polyendocrine Syndrome",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1216,
+      "name": "BAP1 associated tumour predisposition syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1217,
+      "name": "Paediatric pseudo-obstruction syndrome",
+      "version": "2.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 24
+    },
+    {
+      "id": 1220,
+      "name": "Unexplained death in infancy and sudden unexplained death in childhood",
+      "version": "23.105",
+      "signed_off": "2026-08-12",
+      "green_genes": 1344
+    },
+    {
+      "id": 1221,
+      "name": "Hereditary diffuse gastric cancer",
+      "version": "2.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1222,
+      "name": "Li Fraumeni Syndrome",
+      "version": "1.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1223,
+      "name": "Inherited prostate cancer",
+      "version": "1.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 8
+    },
+    {
+      "id": 1225,
+      "name": "Hereditary isolated diabetes insipidus",
+      "version": "2.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 3
+    },
+    {
+      "id": 1308,
+      "name": "Barth syndrome",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1309,
+      "name": "Beckwith-Wiedemann syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1310,
+      "name": "Blepharophimosis ptosis and epicanthus inversus",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1311,
+      "name": "CADASIL",
+      "version": "1.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1312,
+      "name": "Calcium-sensing receptor phenotypes",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1313,
+      "name": "Carney complex",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1314,
+      "name": "Central congenital hypoventilation",
+      "version": "1.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1316,
+      "name": "Combined vitamin K-dependent clotting factor deficiency",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1317,
+      "name": "Congenital adrenal hyperplasia",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1318,
+      "name": "Cystic fibrosis - Diagnostic",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1319,
+      "name": "Cystinosis",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1320,
+      "name": "DICER1-related cancer predisposition",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1321,
+      "name": "Duchenne or Becker muscular dystrophy",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1322,
+      "name": "Elastin-related phenotypes",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1323,
+      "name": "Fabry disease",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1324,
+      "name": "Facioscapulohumeral muscular dystrophy - extended testing",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1325,
+      "name": "Factor II deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1326,
+      "name": "Factor IX deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1327,
+      "name": "Factor V deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1328,
+      "name": "Factor VII deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1329,
+      "name": "Factor VIII deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1330,
+      "name": "Factor X deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1331,
+      "name": "Factor XI deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1332,
+      "name": "Factor XIII deficiency",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1333,
+      "name": "Familial dysalbuminaemic hyperthyroxinaemia",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1334,
+      "name": "Familial tumours of the nervous system",
+      "version": "3.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 7
+    },
+    {
+      "id": 1335,
+      "name": "Fumarate hydratase-related tumour syndromes",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1336,
+      "name": "Gaucher disease",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1337,
+      "name": "Generalised arterial calcification in infancy",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1338,
+      "name": "Glucokinase-related fasting hyperglycaemia",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1340,
+      "name": "Glycogen storage disease V",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1341,
+      "name": "GM1 Gangliosidosis and Mucopolysaccharidosis Type IVB",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1343,
+      "name": "Haemophagocytic syndrome with absent perforin expression",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1344,
+      "name": "Haemophagocytic syndrome with absent XIAP expression",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1345,
+      "name": "Hereditary angioedema types I and II",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1347,
+      "name": "Incontinentia pigmenti",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1348,
+      "name": "Inherited parathyroid cancer",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1349,
+      "name": "Inherited susceptibility to acute lymphoblastoid leukaemia (ALL)",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1350,
+      "name": "IPEX - Immunodysregulation Polyendocrinopathy and Enteropathy, X-Linked",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1351,
+      "name": "Krabbe disease - GALC deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1352,
+      "name": "Krabbe disease - Saposin A deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1353,
+      "name": "Lymphoproliferative syndrome with absent SAP expression",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1354,
+      "name": "Lysosomal acid lipase deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1356,
+      "name": "Mitochondrial Complex V deficiency, TMEM70 type",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1357,
+      "name": "Mitochondrial neurogastrointestinal encephalopathy",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1358,
+      "name": "Monitoring for G(M)CSF escape variants",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1359,
+      "name": "Mucolipidosis II and III Alpha or Beta",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1360,
+      "name": "Mucopolysaccharidosis type IH or S",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1361,
+      "name": "Mucopolysaccharidosis type II",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1362,
+      "name": "Mucopolysaccharidosis type IIIA",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1363,
+      "name": "Mucopolysaccharidosis type IIIB",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1364,
+      "name": "Mucopolysaccharidosis type IVA",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1365,
+      "name": "Mucopolysaccharidosis type VI",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1366,
+      "name": "Multiple endocrine neoplasia type 2",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1367,
+      "name": "Multiple exostoses",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1368,
+      "name": "NARP syndrome or maternally inherited Leigh syndrome",
+      "version": "2.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1369,
+      "name": "Neonatal diabetes - small panel",
+      "version": "1.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1370,
+      "name": "Neurofibromatosis type 1 (GMS)",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1371,
+      "name": "Neuronal ceroid lipofuscinosis type 2",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1372,
+      "name": "Neutropaenia consistent with ELANE variants",
+      "version": "1.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1373,
+      "name": "Nevoid Basal Cell Carcinoma Syndrome or Gorlin syndrome",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1374,
+      "name": "Niemann Pick disease type C",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1375,
+      "name": "Niemann-Pick disease type A or B",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1376,
+      "name": "Nijmegen breakage syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1377,
+      "name": "Peutz Jeghers Syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1378,
+      "name": "Phenylketonuria",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1379,
+      "name": "POLG-related disorder",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1380,
+      "name": "Primary hyperaldosteronism",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1381,
+      "name": "Pseudoxanthoma elasticum",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1382,
+      "name": "PTEN Hamartoma Tumor Syndrome",
+      "version": "1.7",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1383,
+      "name": "Pulmonary alveolar microlithiasis",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1384,
+      "name": "Retinoblastoma",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1385,
+      "name": "Sandhoff disease",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1386,
+      "name": "SCID with features of gamma chain deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1387,
+      "name": "Segmental or atypical neurofibromatosis type 1 testing",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1388,
+      "name": "Severe combined immunodeficiency with adenosine deaminase deficiency",
+      "version": "1.6",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1389,
+      "name": "Severe combined immunodeficiency with PNP deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1390,
+      "name": "Short stature - SHOX deficiency",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1391,
+      "name": "Sitosterolaemia",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1392,
+      "name": "Smith-Lemli-Opitz syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1393,
+      "name": "Spinal muscular atrophy - Diagnostic",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1394,
+      "name": "Subcutaneous panniculitis T-cell lymphoma (SPTCL)",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1395,
+      "name": "Syndromic and non syndromic craniosynostosis involving midline sutures",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1396,
+      "name": "Tay-Sachs disease",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1397,
+      "name": "Sickle cell, thalassaemia and other haemoglobinopathies",
+      "version": "2.11",
+      "signed_off": "2026-08-12",
+      "green_genes": 5
+    },
+    {
+      "id": 1398,
+      "name": "Thanatophoric dysplasia",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1399,
+      "name": "Thiamine metabolism dysfunction syndrome 2",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1400,
+      "name": "Tuberous sclerosis",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1402,
+      "name": "Variegate porphyria",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1403,
+      "name": "Von Hippel Lindau syndrome",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1404,
+      "name": "von Willebrand disease",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1405,
+      "name": "Wilson disease",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1406,
+      "name": "Wiskott-Aldrich syndrome",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1471,
+      "name": "Monogenic short stature",
+      "version": "2.8",
+      "signed_off": "2026-08-12",
+      "green_genes": 73
+    },
+    {
+      "id": 1504,
+      "name": "Isovaleric acidaemia - Diagnostic",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1505,
+      "name": "Glutaric acidaemia type 1 - Diagnostic",
+      "version": "1.5",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1506,
+      "name": "Medium-chain acyl-CoA dehydrogenase deficiency (MCADD) - Diagnostic",
+      "version": "1.4",
+      "signed_off": "2026-08-12",
+      "green_genes": 1
+    },
+    {
+      "id": 1537,
+      "name": "Unexplained young onset end-stage renal disease - additional genes",
+      "version": "2.1",
+      "signed_off": "2026-08-12",
+      "green_genes": 34
+    },
+    {
+      "id": 1570,
+      "name": "NICE approved PARP inhibitor treatment",
+      "version": "1.3",
+      "signed_off": "2026-08-12",
+      "green_genes": 2
+    },
+    {
+      "id": 1636,
+      "name": "Embryonal tumour of possible germline origin",
+      "version": "1.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 26
+    },
+    {
+      "id": 1637,
+      "name": "Sarcoma of possible germline origin",
+      "version": "1.2",
+      "signed_off": "2026-08-12",
+      "green_genes": 13
+    },
+    {
+      "id": 1638,
+      "name": "Childhood interstitial lung disease",
+      "version": "1.9",
+      "signed_off": "2026-08-12",
+      "green_genes": 34
+    },
+    {
+      "id": 1669,
+      "name": "Adult-onset neurological disorders",
+      "version": "9.19",
+      "signed_off": "2026-08-12",
+      "green_genes": 283
+    }
+  ]
+}

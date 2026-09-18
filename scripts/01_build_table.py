@@ -10,6 +10,12 @@ disease area. `cardiac` is the default panel and its table sits at the top of
 data/. Any other panel gets a folder of its own, data/<panel>/, holding the same
 two files with the same columns.
 
+Genes that are not in the cache yet are asked for up to 50 at a time in one
+query, and the answer is dealt out into the same per-gene cache files a
+one-gene query would write, by the gene symbols ClinVar gives each record.
+Everything after the download reads the per-gene files, so the table comes out
+the same either way. --chunk 1 asks one gene at a time, as the script did first.
+
 Writes into data/ (git-ignored):
     variants.csv    one row per variant, the readable columns first
     columns.json    which columns are features, frequencies and label
@@ -18,8 +24,10 @@ Writes into data/ (git-ignored):
 Usage:
     uv run python scripts/01_build_table.py
     uv run python scripts/01_build_table.py --panel cancer     # another disease area, into data/cancer/
+    uv run python scripts/01_build_table.py --panel all        # every NHS signed-off panel, into data/all/
     uv run python scripts/01_build_table.py --refresh          # download again
     uv run python scripts/01_build_table.py --genes MYH7,TTR   # quick test
+    uv run python scripts/01_build_table.py --chunk 1          # one gene per query, the slow way
 
 What every column means: docs/table_columns.md
 How to add a disease area: docs/disease_areas.md
@@ -47,6 +55,7 @@ DEFAULT_PANEL = "cardiac"
 
 API_URL = "https://myvariant.info/v1/query"
 GENOME_BUILD = "hg38"
+DEFAULT_CHUNK = 50  # genes per download query
 
 # Score columns: our column name -> where the value sits in the API record.
 #
@@ -237,6 +246,13 @@ def first_item(value):
     return value
 
 
+def as_list(value) -> list:
+    """The API gives one item or a list. Always a list here, empty for nothing."""
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
 def to_number(value) -> float:
     """A float. For a list (one score per transcript) the highest. NaN if missing."""
     if isinstance(value, list):
@@ -264,19 +280,23 @@ def fields_to_request() -> str:
     return ",".join(clinvar + amino_acids + list(SCORES.values()) + frequencies)
 
 
-def download_gene(gene: str, refresh: bool) -> list[dict]:
-    cache_file = CACHE_DIR / f"{gene}.json"
-    if cache_file.exists() and not refresh:
-        return json.loads(cache_file.read_text(encoding="utf-8"))
+def gene_query(genes: list[str]) -> str:
+    """The query for one gene, or for several genes at once.
 
-    # Missense only: AlphaMissense exists only for missense variants.
-    # The pathogenic/benign filter just keeps the download small;
-    # the real decision is made locally in clinvar_verdict().
-    query = (
-        f"clinvar.gene.symbol:{gene} AND _exists_:dbnsfp.alphamissense "
+    Missense only: AlphaMissense exists only for missense variants.
+    The pathogenic/benign filter just keeps the download small;
+    the real decision is made locally in clinvar_verdict().
+    """
+    symbols = genes[0] if len(genes) == 1 else "(" + " OR ".join(genes) + ")"
+    return (
+        f"clinvar.gene.symbol:{symbols} AND _exists_:dbnsfp.alphamissense "
         "AND clinvar.rcv.clinical_significance:(pathogenic OR benign)"
     )
-    page = ask_api({"q": query, "fields": fields_to_request(), "assembly": GENOME_BUILD, "fetch_all": "true"})
+
+
+def fetch_records(query: str, fields: str) -> list[dict]:
+    """Every record the query matches. A big answer arrives in pages, each asked for with the last page's id."""
+    page = ask_api({"q": query, "fields": fields, "assembly": GENOME_BUILD, "fetch_all": "true"})
     expected = page.get("total", 0)
     records = list(page.get("hits", []))
     while page.get("_scroll_id") and len(records) < expected:
@@ -285,9 +305,63 @@ def download_gene(gene: str, refresh: bool) -> list[dict]:
         if not page.get("hits"):
             break
         records.extend(page["hits"])
+    return records
 
+
+def download_gene(gene: str, refresh: bool) -> list[dict]:
+    cache_file = CACHE_DIR / f"{gene}.json"
+    if cache_file.exists() and not refresh:
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    records = fetch_records(gene_query([gene]), fields_to_request())
     cache_file.write_text(json.dumps(records), encoding="utf-8")
     return records
+
+
+def download_in_chunks(genes: list[str], chunk: int, refresh: bool) -> None:
+    """Fill the cache for the genes that are not in it yet, several genes per query.
+
+    One query for up to `chunk` genes returns the same records as one query per
+    gene, and each record says which genes ClinVar assigns it to. So the answer
+    is dealt out into the per-gene files download_gene() would have written, one
+    per gene asked for, empty when nothing came back. A record that names two
+    of the genes asked for goes into both files, as it would with two queries.
+    """
+    missing = [gene for gene in genes if refresh or not (CACHE_DIR / f"{gene}.json").exists()]
+    if not missing:
+        return
+    fields = fields_to_request() + ",clinvar.gene.symbol"  # only to deal the records out
+    batches = [missing[start : start + chunk] for start in range(0, len(missing), chunk)]
+    print(f"downloading {len(missing)} genes in {len(batches)} queries of up to {chunk} genes each", flush=True)
+    for number, batch in enumerate(batches, 1):
+        started = time.time()
+        records = fetch_records(gene_query(batch), fields)
+        by_gene = split_by_gene(records, batch)
+        for gene in batch:
+            (CACHE_DIR / f"{gene}.json").write_text(json.dumps(by_gene[gene]), encoding="utf-8")
+        print(f"  query {number:>3}/{len(batches)}  {len(batch):>3} genes  {len(records):>6} records  {time.time() - started:5.1f} s", flush=True)
+
+
+def split_by_gene(records: list[dict], genes: list[str]) -> dict[str, list[dict]]:
+    """Deal the records of a many-gene query out by gene, then drop the gene field that was only asked for to do this."""
+    wanted = {gene.upper(): gene for gene in genes}
+    by_gene: dict[str, list[dict]] = {gene: [] for gene in genes}
+    for record in records:
+        symbols = {symbol.upper() for symbol in clinvar_genes(record)}
+        for entry in as_list(record.get("clinvar")):
+            entry.pop("gene", None)
+        for symbol in symbols & wanted.keys():
+            by_gene[wanted[symbol]].append(record)
+    return by_gene
+
+
+def clinvar_genes(record: dict) -> list[str]:
+    """The gene symbols ClinVar gives a record. `clinvar`, `clinvar.gene` and the symbol can each be one item or a list."""
+    symbols = []
+    for entry in as_list(record.get("clinvar")):
+        for gene in as_list(entry.get("gene") if isinstance(entry, dict) else None):
+            if isinstance(gene, dict):
+                symbols += [str(symbol) for symbol in as_list(gene.get("symbol"))]
+    return symbols
 
 
 def ask_api(params: dict) -> dict:
@@ -326,7 +400,10 @@ def main() -> int:
     parser.add_argument("--refresh", action="store_true", help="ignore cached downloads")
     parser.add_argument("--genes", help="comma-separated genes instead of the whole panel")
     parser.add_argument("--out", type=Path, help="where to write the table (default: data/variants.csv, or data/<panel>/variants.csv)")
+    parser.add_argument("--chunk", type=int, default=DEFAULT_CHUNK, help=f"genes per download query (default: {DEFAULT_CHUNK}). 1 asks one gene at a time")
     args = parser.parse_args()
+    if args.chunk < 1:
+        parser.error("--chunk must be at least 1")
     out = args.out or table_folder(args.panel) / "variants.csv"
 
     panel_file = gene_panel_file(args.panel)
@@ -337,9 +414,14 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-    genes = args.genes.split(",") if args.genes else read_gene_panel(panel_file)
+    genes = [gene.strip() for gene in (args.genes.split(",") if args.genes else read_gene_panel(panel_file))]
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     out.parent.mkdir(parents=True, exist_ok=True)
+
+    # Many genes per query when the cache is short of them. With --chunk 1 the loop below downloads instead.
+    if args.chunk > 1:
+        download_in_chunks(genes, args.chunk, args.refresh)
+    refresh_one_by_one = args.refresh and args.chunk == 1
 
     rows_by_id: dict[str, dict] = {}
     dropped = Counter()
@@ -347,14 +429,14 @@ def main() -> int:
     downloaded = 0
 
     for number, gene in enumerate(genes, 1):
-        records = download_gene(gene.strip(), args.refresh)
+        records = download_gene(gene, refresh_one_by_one)
         downloaded += len(records)
         rows_before = len(rows_by_id)
         for record in records:
             if record["_id"] in rows_by_id:
                 dropped["already listed under another gene"] += 1
                 continue
-            row, why_dropped = build_row(record, gene.strip())
+            row, why_dropped = build_row(record, gene)
             if row is None:
                 dropped[why_dropped] += 1
             else:

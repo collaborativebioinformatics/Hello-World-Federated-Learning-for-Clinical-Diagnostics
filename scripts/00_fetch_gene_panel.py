@@ -10,11 +10,23 @@ is the default, and `cancer`. Every panel in a set is pinned to a version, so th
 list can be cited and rebuilt exactly. To update, change a version number there
 and rerun.
 
+The set `all` has no hand-written list. Step 0 reads PanelApp's signed-off list
+and takes every panel on it, at the version the list reports that day. The
+panels and versions it used go to config/all_panel_versions.json, so the claim
+"every NHS signed-off panel as of that date" can be checked and rebuilt.
+
+Every panel answer is kept in data/raw_panelapp/<id>_v<version>.json. A panel
+version does not change once published, so a rerun reads from there and only
+asks PanelApp for what is missing. For `all` that is about 300 panels at one
+call per second, and a run that PanelApp cuts short carries on from where it
+stopped.
+
 Writes config/<NAME>_gene_panel.txt. Open API, no login.
 
 Usage:
     uv run python scripts/00_fetch_gene_panel.py                  # the cardiac set
     uv run python scripts/00_fetch_gene_panel.py --panel cancer   # another set from config/panel_sets.json
+    uv run python scripts/00_fetch_gene_panel.py --panel all      # every signed-off panel, as of today
     uv run python scripts/00_fetch_gene_panel.py --list cancer    # signed-off panels with "cancer" in the name
 
 How to add a disease area: docs/disease_areas.md
@@ -36,6 +48,7 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
 PANEL_SETS = CONFIG_DIR / "panel_sets.json"
+PANEL_CACHE = ROOT / "data" / "raw_panelapp"
 
 API_URL = "https://panelapp.genomicsengland.co.uk/api/v1/panels/{panel_id}/"
 SIGNED_OFF_URL = "https://panelapp.genomicsengland.co.uk/api/v1/panels/signedoff/"
@@ -86,9 +99,20 @@ def ask_panelapp(url: str, params: dict | None = None) -> dict:
     raise RuntimeError(f"PanelApp kept answering 'too many requests' for: {url}")
 
 
+def fetch_panel(panel_id: int, version: str) -> dict:
+    """One panel at one version, from data/raw_panelapp/ if it was fetched before, else from PanelApp."""
+    cache_file = PANEL_CACHE / f"{panel_id}_v{version}.json"
+    if cache_file.exists():
+        return json.loads(cache_file.read_text(encoding="utf-8"))
+    panel = ask_panelapp(API_URL.format(panel_id=panel_id), {"version": version})
+    PANEL_CACHE.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(panel), encoding="utf-8")
+    return panel
+
+
 def fetch_green_genes(panel_id: int, version: str) -> tuple[str, dict[str, set[str]]]:
     """Return the panel's name, and for every green gene its modes of inheritance."""
-    panel = ask_panelapp(API_URL.format(panel_id=panel_id), {"version": version})
+    panel = fetch_panel(panel_id, version)
     # A panel can list one gene twice (once per inheritance pattern), so a gene can collect several modes.
     modes_of_gene: dict[str, set[str]] = {}
     for entry in panel["genes"]:
@@ -98,23 +122,58 @@ def fetch_green_genes(panel_id: int, version: str) -> tuple[str, dict[str, set[s
     return panel["name"], modes_of_gene
 
 
+def signed_off_panels() -> list[dict]:
+    """Every panel on PanelApp's signed-off list, as the API describes it."""
+    panels = []
+    url = SIGNED_OFF_URL
+    while url:  # the list comes in pages, and each page gives the address of the next
+        page = ask_panelapp(url)
+        panels += page["results"]
+        url = page.get("next")
+    return panels
+
+
+def panels_of_set(panel_set: dict) -> list[dict]:
+    """The panels to fetch, each with its id and version. A set flagged `from_signed_off_list` asks PanelApp."""
+    if not panel_set.get("from_signed_off_list"):
+        return panel_set["panels"]
+    return [
+        {"id": panel["id"], "version": panel["version"], "signed_off": panel["signed_off"]}
+        for panel in sorted(signed_off_panels(), key=lambda panel: panel["id"])
+    ]
+
+
 def write_gene_panel(name: str) -> None:
     panel_set = read_panel_set(name)
+    panels = panels_of_set(panel_set)
     panels_of_gene: dict[str, list[int]] = {}
     modes_of_gene: dict[str, set[str]] = {}
     summary_lines = []
-    for panel in panel_set["panels"]:
+    used = []  # what was fetched, for the versions file of a signed-off set
+    for number, panel in enumerate(panels, 1):
         panel_id, version = panel["id"], panel["version"]
         panel_name, green = fetch_green_genes(panel_id, version)
         for gene, modes in green.items():
             panels_of_gene.setdefault(gene, []).append(panel_id)
             modes_of_gene.setdefault(gene, set()).update(modes)
+        used.append({"id": panel_id, "name": panel_name, "version": version,
+                     "signed_off": panel.get("signed_off"), "green_genes": len(green)})
         summary_lines.append(f"#   {panel_id:>4}  v{version:<6} {len(green):>3} green genes  {panel_name}")
-        print(summary_lines[-1].lstrip("# "))
+        print(f"[{number:>3}/{len(panels)}] {summary_lines[-1].lstrip('# ')}")
 
+    if panel_set.get("from_signed_off_list"):
+        source_lines = [
+            f"# {panel_set['title']}: green (diagnostic-grade) genes from Genomics England PanelApp, taken from",
+            f"# every panel on PanelApp's signed-off list on {date.today()}, at the version that list reported.",
+            f"# The same list of panels and versions is in config/{name}_panel_versions.json.",
+        ]
+    else:
+        source_lines = [
+            f"# {panel_set['title']} gene panel: green (diagnostic-grade) genes from Genomics England PanelApp,",
+            "# taken from the panels below, which are signed off by the NHS Genomic Medicine Service.",
+        ]
     header = [
-        f"# {panel_set['title']} gene panel: green (diagnostic-grade) genes from Genomics England PanelApp,",
-        "# taken from the panels below, which are signed off by the NHS Genomic Medicine Service.",
+        *source_lines,
         f"# Written by scripts/00_fetch_gene_panel.py --panel {name} on {date.today()}. Rerunning overwrites this file.",
         "#",
         *summary_lines,
@@ -133,16 +192,27 @@ def write_gene_panel(name: str) -> None:
     gene_panel = CONFIG_DIR / f"{name}_gene_panel.txt"
     gene_panel.write_text("\n".join(header + gene_lines) + "\n", encoding="utf-8")
     print(f"\nwrote {gene_panel}  ({len(panels_of_gene)} genes)")
+    if panel_set.get("from_signed_off_list"):
+        write_panel_versions(name, used, len(panels_of_gene))
+
+
+def write_panel_versions(name: str, panels: list[dict], gene_count: int) -> None:
+    """The exact list behind a signed-off build: which panels, at which version, so the claim can be rebuilt."""
+    path = CONFIG_DIR / f"{name}_panel_versions.json"
+    listing = {
+        "date": str(date.today()),
+        "source": SIGNED_OFF_URL,
+        "panel_count": len(panels),
+        "unique_green_genes": gene_count,
+        "panels": panels,
+    }
+    path.write_text(json.dumps(listing, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {path}  ({len(panels)} panels)")
 
 
 def list_signed_off(keyword: str) -> None:
     """Print the signed-off panels whose name contains the keyword, to pick panels for a new disease area."""
-    matches = []
-    url = SIGNED_OFF_URL
-    while url:  # the list comes in pages, and each page gives the address of the next
-        page = ask_panelapp(url)
-        matches += [panel for panel in page["results"] if keyword.lower() in panel["name"].lower()]
-        url = page.get("next")
+    matches = [panel for panel in signed_off_panels() if keyword.lower() in panel["name"].lower()]
 
     print(f"{'id':>5}  {'version':<8} {'genes':>5}  name")
     for panel in sorted(matches, key=lambda panel: panel["name"]):
