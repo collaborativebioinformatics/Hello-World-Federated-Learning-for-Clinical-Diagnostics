@@ -367,8 +367,8 @@ Green means the step runs from a fresh clone with the command shown. To update t
 Needs [uv](https://docs.astral.sh/uv/). Python 3.12 and the packages install themselves on first run.
 
 ```
-git clone https://github.com/collaborativebioinformatics/Hello-World-Federated-Learning-for-Clinical-Diagnostics.git
-cd Hello-World-Federated-Learning-for-Clinical-Diagnostics
+git clone https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics.git
+cd Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
 uv sync
 
 uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp (already committed)

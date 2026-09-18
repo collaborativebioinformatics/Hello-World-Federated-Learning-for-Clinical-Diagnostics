@@ -7,8 +7,8 @@ Everything runs with [uv](https://docs.astral.sh/uv/), which installs Python 3.1
 ## A fresh clone
 
 ```
-git clone https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics.git
-cd Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
+git clone https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics.git
+cd Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
 uv run python scripts/01_build_table.py           # once, about 4 minutes: downloads the public data
 uv run python scripts/02_simulate_hospitals.py    # once, a few seconds: the three hospitals
 uv run python scripts/06_query_tui.py             # the patient query, in a real terminal
@@ -54,8 +54,8 @@ uv run python scripts/06_query_variant.py "chr11:g.47332275_47332299del" --patie
 ## The steps
 
 ```
-git clone https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics.git
-cd Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
+git clone https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics.git
+cd Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
 uv sync
 
 uv run python scripts/00_fetch_gene_panel.py        # step 0, the gene list from PanelApp, already committed

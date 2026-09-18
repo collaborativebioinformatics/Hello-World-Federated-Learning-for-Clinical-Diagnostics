@@ -30,7 +30,7 @@ federated learning, variant classification, allele frequency, genetic ancestry, 
 
 **Team 12:**
 
-Link to Repository: https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
+Link to Repository: https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics
 
 Every table is rebuilt from public sources with a fixed seed (Figure T.12.1). Genes came from NHS signed-off Genomics England PanelApp panels [8] at pinned versions: six cardiac panels with 104 green genes, nine inherited cancer panels with 41, and all 296 signed-off panels with 4,206 genes as a first look at scale. For each gene, ClinVar classifications [9], dbNSFP rank scores [10] and gnomAD v2.1.1 population frequencies [3] were retrieved as one record per variant from the hg38 index of myvariant.info [11], restricting the table to missense variants. A variant was labelled pathogenic when every starred ClinVar submission called it pathogenic or likely pathogenic, benign when every one called it benign or likely benign, and dropped otherwise. Tools trained on ClinVar or HGMD labels were excluded, to limit circularity [12], and scores missing for more than 30% of variants were set aside. On the all-panels list, genes that returned nothing under the panel's symbol were queried again under their current and previous HGNC symbols [13], which recovered 228 of 356. A variant was flagged population-discordant when its frequency reached 0.1% in one of the European, South Asian or African groups and was at least ten times lower in another; the flag is never a model input.
 
@@ -77,7 +77,7 @@ The pattern repeated on the inherited cancer genes with nothing changed: 12, 8, 
 
 # Data and Software availability
 
-**Team 12:** The pipeline code is publicly available at https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics, released under the MIT License. The patient query runs as a web page at https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/. All data sources are open: Genomics England PanelApp [8]; ClinVar release 2025-05 [9], dbNSFP 4.8a [10] and gnomAD v2.1.1 exomes [3], retrieved through the hg38 index of myvariant.info [11]; HGNC gene symbols [13]; and the GRCh38 assembly from UCSC. dbNSFP is distributed for academic use under CC BY-NC-ND 4.0, so the derived tables are not redistributed and are rebuilt by the commands in the repository. gnomAD data are released under CC0.
+**Team 12:** The pipeline code is publicly available at https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics, released under the MIT License. The patient query runs as a web page at https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/. All data sources are open: Genomics England PanelApp [8]; ClinVar release 2025-05 [9], dbNSFP 4.8a [10] and gnomAD v2.1.1 exomes [3], retrieved through the hg38 index of myvariant.info [11]; HGNC gene symbols [13]; and the GRCh38 assembly from UCSC. dbNSFP is distributed for academic use under CC BY-NC-ND 4.0, so the derived tables are not redistributed and are rebuilt by the commands in the repository. gnomAD data are released under CC0.
 
 # Author Contributions
 

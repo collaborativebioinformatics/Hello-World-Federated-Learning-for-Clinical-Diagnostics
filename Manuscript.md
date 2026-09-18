@@ -381,7 +381,7 @@ Step 5 remains to be run as intended: the federated model of step 4 scored under
 
 ## Data and code availability
 
-All code is available at https://github.com/collaborativebioinformatics/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics, and the patient query runs as a web page at https://collaborativebioinformatics.github.io/Mildly-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/. The tables are rebuilt from public sources with
+All code is available at https://github.com/collaborativebioinformatics/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics, and the patient query runs as a web page at https://collaborativebioinformatics.github.io/Confidently-Flirting-With-Federated-Learning-for-Clinical-Diagnostics/demo/. The tables are rebuilt from public sources with
 
 ```
 uv run python scripts/00_fetch_gene_panel.py
